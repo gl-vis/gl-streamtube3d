@@ -21,6 +21,8 @@
     "gl-spikes3d": "^1.0.5"
   },
   "scripts": {
+    "build": "browserify -o build/bundle.js streamtube.js",
+    "build-example": "browserify -o build/example.js example/streamtube.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
