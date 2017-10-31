@@ -26,7 +26,7 @@ var mesh = createMesh(gl, streamTube)
 scene.add(mesh)
 ```
 
-[Try out the example in your browser](http://kig.github.io/gl-streamtube3d/)
+[Try out the example in your browser](http://gl-vis.github.io/gl-streamtube3d/)
 
 # Install
 
