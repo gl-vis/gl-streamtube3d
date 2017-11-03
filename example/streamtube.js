@@ -18,7 +18,7 @@ var gl = canvas.getContext('webgl')
 var windBounds = getBounds(wind.positions);
 
 var indexBounds = [
-  new Float32Array([0,0,0]), 
+  new Float32Array([0,0,0]),
   new Float32Array([40, 34, 14])
 ];
 
@@ -89,12 +89,11 @@ var streams = createStreamTubes({
     var u = sample(wind.vectors, x, y, z);
     vec3.multiply(v, u, scale);
     return v;
-  }
+  },
+  colormap: 'portland'
 }, indexBounds);
 
 bounds = indexBounds;
-
-streams.colormap = 'jet';
 
 var mesh = createMesh(gl, streams);
 var select = createSelect(gl, [canvas.width, canvas.height])

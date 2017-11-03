@@ -6,7 +6,7 @@ const vec4 = require('gl-vec4');
 const streamToTube = function(stream) {
 	const { points, velocities, divergences } = stream;
 	//if (points.length < 10) return {};
-	// debugger; 
+	// debugger;
 	var p, fwd, r, u, v, up;
 	up = vec3.set(vec3.create(), 0, 1, 0);
 	u = vec3.create();
@@ -90,7 +90,7 @@ const streamToTube = function(stream) {
 
 };
 
-const createTubes = function(streams) {
+const createTubes = function(streams, colormap) {
 	var tubes = streams.map(streamToTube);
 	var positions = [];
 	var cells = [];
@@ -105,7 +105,8 @@ const createTubes = function(streams) {
 	return {
 		positions: positions,
 		cells: cells,
-		vertexIntensity: vertexIntensity
+		vertexIntensity: vertexIntensity,
+		colormap
 	};
 };
 
@@ -131,7 +132,7 @@ var defaultGetDivergence = function(p, v0, scale) {
 };
 
 module.exports = function(vectorField, bounds) {
-	var positions = vectorField.startingPositions;	
+	var positions = vectorField.startingPositions;
 	var maxLength = vectorField.maxLength || 1000;
 	var widthScale = vectorField.widthScale || 1e4;
 
@@ -156,13 +157,13 @@ module.exports = function(vectorField, bounds) {
 	for (var i = 0; i < positions.length; i++) {
 		var p = vec3.create();
 		vec3.copy(p, positions[i]);
-		
+
 		var stream = [p];
 		var velocities = [];
 		var v = vectorField.getVelocity(p);
 		velocities.push(v);
 		var divergences = [vectorField.getDivergence(p, v)];
-		
+
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
 		while (stream.length < maxLength && inBounds(bounds, p)) {
@@ -178,5 +179,5 @@ module.exports = function(vectorField, bounds) {
 		}
 	}
 
-	return createTubes(streams);
+	return createTubes(streams, vectorField.colormap);
 };

@@ -18,7 +18,8 @@ var streamTube = createStreamTube({
     startingPositions: positionsArray,
     maxLength: 1000,
     widthScale: 10000,
-    getVelocity: velocityFunction
+    getVelocity: velocityFunction,
+    colormap: 'portland'
 }, bounds)
 
 var mesh = createMesh(gl, streamTube)
@@ -33,7 +34,7 @@ scene.add(mesh)
 ```
 npm i gl-streamtube3d
 ```
-    
+
 # Basic interface
 
 ## Constructor
@@ -44,10 +45,11 @@ Creates a stream tube plot of a vector field.
 * `params` is an object that has the following properties:
 
     + `startingPositions` *(Required)* An array of starting positions for the vector field, encoded as arrays.
-    + `maxLength` *(Optional)* The maximum number of segments to add to a streamtube. Default is 1000.
-    + `widthSCale` *(Optional)* The divergence multiplier to get the width of the streamtube. Default is 10000.
     + `getVelocity(point)` *(Required)* A getter function to get the velocity at a given point.
     + `getDivergence(point)` *(Optional)* A getter function to get the divergence at a given point. Used for the width of the streamtube. Defaults to the divergence of the getVelocity function.
+    + `maxLength` *(Optional)* The maximum number of segments to add to a streamtube. Default is 1000.
+    + `widthScale` *(Optional)* The divergence multiplier to get the width of the streamtube. Default is 10000.
+    + `colormap` *(Optional)* The colormap to use.
 
 **Returns** A streamtube plot object that can be passed to gl-mesh3d.
 
