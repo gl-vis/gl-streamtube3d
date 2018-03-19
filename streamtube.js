@@ -110,7 +110,7 @@ const createTubes = function(streams, colormap) {
 	};
 };
 
-var defaultGetDivergence = function(p, v0, scale) {
+const defaultGetDivergence = function(p, v0, scale) {
 	var dp = vec3.create();
 	var e = 1/10000;
 
