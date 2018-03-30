@@ -132,10 +132,13 @@ const defaultGetDivergence = function(p, v0, scale) {
 };
 
 const defaultGetVelocity = function(p) {
-    var [x, y, z] = p;
     var v = vec3.create();
-    var u = sampleMeshgrid(this.vectors, this.meshgrid, x, y, z);
-    vec3.multiply(v, u, scale);
+    var u = sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders);
+    if (this.vectorScale) {
+    	vec3.multiply(v, u, this.vectorScale);
+	} else {
+		v = u;
+	}
     return v;
 };
 
@@ -191,7 +194,7 @@ const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
 
 	// Reject points outside the meshgrid, return a zero vector.
 	if (x0 < 0 || y0 < 0 || z0 < 0 || x1 >= w || y1 >= h || z1 >= d) {
-		return V.create();
+		return vec3.create();
 	}
 
 	// Normalize point coordinates to 0..1 scaling factor between x0 and x1.
@@ -223,7 +226,7 @@ const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
 	var v110 = array[y1off + z1off + x0off];
 	var v111 = array[y1off + z1off + x1off];
 
-	var result = V.create();
+	var result = vec3.create();
 
 	// Average samples according to distance to point.
 	vec3.lerp(result, v000, v001, xf);
@@ -250,6 +253,10 @@ module.exports = function(vectorField, bounds) {
 		vectorField.getVelocity = defaultGetVelocity;
 	}
 
+	if (vectorField.clampBorders === undefined) {
+		vectorField.clampBorders = true;
+	}
+
 	var streams = [];
 
 	const [minX, minY, minZ] = bounds[0];
@@ -272,18 +279,22 @@ module.exports = function(vectorField, bounds) {
 		var velocities = [];
 		var v = vectorField.getVelocity(p);
 		velocities.push(v);
-		var divergences = [vectorField.getDivergence(p, v)];
+		var divergences = [vectorField.getDivergence(p, v, widthScale)];
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
 		while (stream.length < maxLength && inBounds(bounds, p)) {
 			var np = vec3.create();
 			vec3.add(np, velocities[velocities.length-1], p);
+			if (np[0] === p[0] && np[1] === p[1] && np[2] === p[2]) {
+				break;
+			}
 
 			stream.push(np);
 			var v = vectorField.getVelocity(np);
 			velocities.push(v);
-			divergences.push(vectorField.getDivergence(np, v, widthScale));
+			var dv = vectorField.getDivergence(np, v, widthScale);
+			divergences.push(dv);
 
 			p = np;
 		}

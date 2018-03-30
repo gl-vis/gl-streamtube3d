@@ -9,6 +9,7 @@ var createSelect = require('gl-select-static')
 var getBounds    = require('bound-points')
 var mouseChange  = require('mouse-change')
 var createMesh   = require('gl-mesh3d')
+var vec3 = require('gl-vec3');
 
 var canvas = document.createElement('canvas')
 document.body.appendChild(canvas)
@@ -45,8 +46,6 @@ var camera = createCamera(canvas, {
            0.5*(bounds[0][2]+bounds[1][2])],
   zoomMax: 500
 })
-var vec3 = require('gl-vec3');
-
 
 var scale = vec3.subtract(vec3.create(), windBounds[1], windBounds[0]);
 vec3.inverse(scale, scale);
@@ -56,6 +55,7 @@ var streams = createStreamTubes({
   startingPositions,
   maxLength: 3000,
   widthScale: 20000,
+  vectorScale: scale,
   vectors: wind.vectors,
   meshgrid: meshgrid,
   colormap: 'portland'
