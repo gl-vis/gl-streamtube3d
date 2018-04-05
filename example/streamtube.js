@@ -29,9 +29,9 @@ for (var y=0; y<34; y++) meshgrid[1].push(y);
 for (var z=0; z<14; z++) meshgrid[2].push(z);
 
 var startingPositions = [];
-for (var y = 0; y < 35; y+=3) {
+for (var y = 0; y < 35; y+=5) {
   for (var x = 0; x < 1; x++) {
-    for (var z = 0; z < 15; z+=3) {
+    for (var z = 0; z < 15; z+=1) {
       startingPositions.push(vec3.set(vec3.create(), x, y, z));
     }
   }
@@ -47,14 +47,16 @@ var camera = createCamera(canvas, {
   zoomMax: 500
 })
 
-var scale = vec3.subtract(vec3.create(), windBounds[1], windBounds[0]);
-vec3.inverse(scale, scale);
-vec3.scale(scale, scale, 0.5);
+//var scale = vec3.subtract(vec3.create(), windBounds[1], windBounds[0]);
+//vec3.inverse(scale, scale);
+//vec3.scale(scale, scale, 0.5);
+
+var scale = [1/40, 1/40, 1/40];
 
 var streams = createStreamTubes({
   startingPositions,
   maxLength: 3000,
-  widthScale: 20000,
+  widthScale: 1500,
   vectorScale: scale,
   vectors: wind.vectors,
   meshgrid: meshgrid,

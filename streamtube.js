@@ -145,9 +145,9 @@ const defaultGetVelocity = function(p) {
 
 const findLastSmallerIndex = function(points, v) {
   for (var i=0; i<points.length; i++) {
-    if (points[i] >= v) {
-      return i-1;
-    }
+  	var p = points[i];
+  	if (p === v) return i;
+    if (p > v) return i-1;
   }
   return i;
 };
@@ -182,6 +182,10 @@ const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
 	var x1 = x0 + 1;
 	var y1 = y0 + 1;
 	var z1 = z0 + 1;
+
+	if (meshgrid[0][x0] === x) x1 = x0;
+	if (meshgrid[1][y0] === y) y1 = y0;
+	if (meshgrid[2][z0] === z) z1 = z0;
 
 	if (clampOverflow) {
 		x0 = clamp(x0, 0, w-1);
@@ -239,6 +243,106 @@ const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
 
 	return result;
 };
+
+window.testSampleMeshGrid = function() {
+
+	// Generate random meshgrid
+	var meshgrid = [];
+	for (var i=0; i<3; i++) {
+		var a = [];
+		var alen = Math.floor(Math.random() * 30 + 1);
+		var c = Math.random() * 100 - 50;
+		for (var j=0; j<alen; j++) {
+			a.push(c);
+			c += Math.random()*10 + 0.1;
+		}
+		meshgrid.push(a);
+	}
+	var dims = meshgrid.map(m => m.length);
+
+	// Generate random data for the meshgrid
+	var data = [];
+	for (var z=0; z<meshgrid[2].length; z++) {
+		for (var y=0; y<meshgrid[1].length; y++) {
+			for (var x=0; x<meshgrid[0].length; x++) {
+				data.push([
+					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0,
+					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0,
+					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0
+				]);
+			}
+		}
+	}
+
+	// Point to point equivalence
+	for (var z=0; z<meshgrid[2].length; z++) {
+		for (var y=0; y<meshgrid[1].length; y++) {
+			for (var x=0; x<meshgrid[0].length; x++) {
+				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
+				var sampled = sampleMeshgrid(point, data, meshgrid, true);
+				var dataValue = data[
+					z * meshgrid[1].length * meshgrid[0].length +
+					y * meshgrid[0].length +
+					x
+				];
+				if (vec3.squaredDistance(sampled, dataValue) > 0.0001) {
+					console.log('index', [x,y,z], 'dims', dims, 'sampled', sampled, 'data', dataValue, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "clampOverflow")
+					throw new Error("sampleMeshgrid sampling disagrees with raw data sample")
+				}
+				sampled = sampleMeshgrid([meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]], data, meshgrid, false);
+				if (vec3.squaredDistance(sampled, dataValue) > 0.0001) {
+					console.log('index', [x,y,z], 'dims', dims, 'sampled', sampled, 'data', dataValue, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "no clampOverflow")
+					throw new Error("sampleMeshgrid sampling disagrees with raw data sample")
+				}
+			}
+		}
+	}
+
+	// Gradient property
+	for (var z=0; z<meshgrid[2].length-1; z++) {
+		for (var y=0; y<meshgrid[1].length-1; y++) {
+			for (var x=0; x<meshgrid[0].length-1; x++) {
+				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
+				var point2 = [meshgrid[0][x+1], meshgrid[1][y+1], meshgrid[2][z+1]];
+				var p1 = vec3.lerp(point, point2, 0.25);
+				var p2 = vec3.lerp(point, point2, 0.75);
+				var s0 = sampleMeshgrid(point, data, meshgrid, true);
+				var s1 = sampleMeshgrid(p1, data, meshgrid, true);
+				var s2 = sampleMeshgrid(p2, data, meshgrid, true);
+				var s3 = sampleMeshgrid(point2, data, meshgrid, true);
+				if (vec3.squaredDistance(s0, s1) > vec3.squaredDistance(s0, s2) ||
+					vec3.squaredDistance(s2, s3) > vec3.squaredDistance(s1, s3)
+				) {
+					console.log('index', [x,y,z], 'dims', dims, s0, s1, s2, s3, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "clampOverflow")
+					throw new Error("sampleMeshgrid sampling gradient is reversed")
+				}
+			}
+		}
+	}
+
+	// Gradient property, no border clamping
+	for (var z=0; z<meshgrid[2].length-1; z++) {
+		for (var y=0; y<meshgrid[1].length-1; y++) {
+			for (var x=0; x<meshgrid[0].length-1; x++) {
+				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
+				var point2 = [meshgrid[0][x+1], meshgrid[1][y+1], meshgrid[2][z+1]];
+				var p1 = vec3.lerp(point, point2, 0.25);
+				var p2 = vec3.lerp(point, point2, 0.75);
+				var s0 = sampleMeshgrid(point, data, meshgrid, false);
+				var s1 = sampleMeshgrid(p1, data, meshgrid, false);
+				var s2 = sampleMeshgrid(p2, data, meshgrid, false);
+				var s3 = sampleMeshgrid(point2, data, meshgrid, false);
+				if (vec3.squaredDistance(s0, s1) > vec3.squaredDistance(s0, s2) ||
+					vec3.squaredDistance(s2, s3) > vec3.squaredDistance(s1, s3)
+				) {
+					console.log('index', [x,y,z], 'dims', dims, s0, s1, s2, s3, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "no clampOverflow")
+					throw new Error("sampleMeshgrid sampling gradient is reversed")
+				}
+			}
+		}
+	}
+};
+
 
 module.exports = function(vectorField, bounds) {
 	var positions = vectorField.startingPositions;
