@@ -132,13 +132,7 @@ const defaultGetDivergence = function(p, v0, scale) {
 };
 
 const defaultGetVelocity = function(p) {
-    var v = vec3.create();
     var u = sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders);
-    //if (this.vectorScale) {
-    //	vec3.multiply(v, u, this.vectorScale);
-	//} else {
-	//	v = u;
-	//}
     return u;
 };
 
