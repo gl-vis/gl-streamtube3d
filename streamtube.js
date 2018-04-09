@@ -134,12 +134,12 @@ const defaultGetDivergence = function(p, v0, scale) {
 const defaultGetVelocity = function(p) {
     var v = vec3.create();
     var u = sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders);
-    if (this.vectorScale) {
-    	vec3.multiply(v, u, this.vectorScale);
-	} else {
-		v = u;
-	}
-    return v;
+    //if (this.vectorScale) {
+    //	vec3.multiply(v, u, this.vectorScale);
+	//} else {
+	//	v = u;
+	//}
+    return u;
 };
 
 
@@ -375,6 +375,10 @@ module.exports = function(vectorField, bounds) {
 		);
 	};
 
+	var boundsSize = vec3.distance(bounds[0], bounds[1]);
+	var maxStepSize = 10 * boundsSize / maxLength;
+	var maxStepSizeSq = maxStepSize * maxStepSize;
+
 	for (var i = 0; i < positions.length; i++) {
 		var p = vec3.create();
 		vec3.copy(p, positions[i]);
@@ -382,23 +386,31 @@ module.exports = function(vectorField, bounds) {
 		var stream = [p];
 		var velocities = [];
 		var v = vectorField.getVelocity(p);
+		var op = p;
 		velocities.push(v);
 		var divergences = [vectorField.getDivergence(p, v, widthScale)];
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
 		while (stream.length < maxLength && inBounds(bounds, p)) {
-			var np = vec3.create();
-			vec3.add(np, velocities[velocities.length-1], p);
-			if (np[0] === p[0] && np[1] === p[1] && np[2] === p[2]) {
+			var np = vec3.clone(v);
+			var sqLen = vec3.squaredLength(np);
+			if (sqLen === 0) {
 				break;
+			} else if (sqLen > maxStepSizeSq) {
+				vec3.scale(np, np, maxStepSize / Math.sqrt(sqLen));
 			}
+			vec3.add(np, np, p);
 
-			stream.push(np);
-			var v = vectorField.getVelocity(np);
-			velocities.push(v);
-			var dv = vectorField.getDivergence(np, v, widthScale);
-			divergences.push(dv);
+			v = vectorField.getVelocity(np);
+
+			if (vec3.squaredDistance(op, np) - maxStepSizeSq > -0.0001 * maxStepSizeSq) {
+				stream.push(np);
+				op = np;
+				velocities.push(v);
+				var dv = vectorField.getDivergence(np, v, widthScale);
+				divergences.push(dv);
+			}
 
 			p = np;
 		}

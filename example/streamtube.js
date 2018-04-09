@@ -1,5 +1,6 @@
 var createStreamTubes = require('../streamtube');
 var wind = require('./dataset-wind');
+var meshgrid = require('./meshgrid');
 
 var createCamera = require('3d-view-controls')
 var perspective  = require('gl-mat4/perspective')
@@ -16,28 +17,34 @@ document.body.appendChild(canvas)
 window.addEventListener('resize', require('canvas-fit')(canvas))
 var gl = canvas.getContext('webgl')
 
-var windBounds = getBounds(wind.positions);
-
-var indexBounds = [
-  new Float32Array([0,0,0]),
-  new Float32Array([40, 34, 14])
-];
-
-var meshgrid = [[], [], []];
-for (var x=0; x<40; x++) meshgrid[0].push(x);
-for (var y=0; y<34; y++) meshgrid[1].push(y);
-for (var z=0; z<14; z++) meshgrid[2].push(z);
-
-var startingPositions = [];
-for (var y = 0; y < 35; y+=5) {
-  for (var x = 0; x < 1; x++) {
-    for (var z = 0; z < 15; z+=1) {
-      startingPositions.push(vec3.set(vec3.create(), x, y, z));
-    }
-  }
+var pvecs = [];
+for (var i=0; i<wind.positions.length; i++) {
+  pvecs.push({position: wind.positions[i], vector: wind.vectors[i]});
 }
+var cmpZYX = function(a, b) {
+  if (a.position[2] !== b.position[2]) return a.position[2] - b.position[2];
+  if (a.position[1] !== b.position[1]) return a.position[1] - b.position[1];
+  return a.position[0] - b.position[0];
+};
+pvecs.sort(cmpZYX);
 
-var bounds = indexBounds;
+var positions = pvecs.map(p => p.position);
+var vectors = pvecs.map(p => p.vector);
+
+var windBounds = getBounds(positions);
+
+
+var startingPositions = meshgrid.toPoints(meshgrid(80, [20, 10, 50], [0, 5, 15])); // {start: 20, step: 10, end: 50}, {start:0, step: 5, end: 15});
+
+var mg = [[],[],[]]
+var mgi =[{},{},{}];
+positions.forEach(([x,y,z]) => {
+  if (!mgi[0][x]) { mgi[0][x] = true; mg[0].push(x); }
+  if (!mgi[1][y]) { mgi[1][y] = true; mg[1].push(y); }
+  if (!mgi[2][z]) { mgi[2][z] = true; mg[2].push(z); }
+})
+
+var bounds = meshgrid.getBounds(mg);
 
 var camera = createCamera(canvas, {
   eye:    [0,0,50],
@@ -47,27 +54,29 @@ var camera = createCamera(canvas, {
   zoomMax: 500
 })
 
-//var scale = vec3.subtract(vec3.create(), windBounds[1], windBounds[0]);
-//vec3.inverse(scale, scale);
-//vec3.scale(scale, scale, 0.5);
-
-var scale = [1/40, 1/40, 1/40];
-
 var streams = createStreamTubes({
   startingPositions,
   maxLength: 3000,
-  widthScale: 1500,
-  vectorScale: scale,
-  vectors: wind.vectors,
-  meshgrid: meshgrid,
+  widthScale: 500,
+  meshgrid: mg,
+  vectors: vectors,
   colormap: 'portland'
-}, indexBounds);
-
-bounds = indexBounds;
+}, bounds);
 
 var mesh = createMesh(gl, streams);
 var select = createSelect(gl, [canvas.width, canvas.height])
-var axes = createAxes(gl, { bounds: bounds })
+var tickSpacing = 5;
+var ticks = bounds[0].map((v,i) => {
+  var arr = [];
+  var firstTick = Math.ceil(bounds[0][i] / tickSpacing) * tickSpacing;
+  var lastTick = Math.floor(bounds[1][i] / tickSpacing) * tickSpacing;
+  for (var tick = firstTick; tick <= lastTick; tick += tickSpacing) {
+    if (tick === -0) tick = 0;
+    arr.push({x: tick, text: tick.toString()});
+  }
+  return arr;
+});
+var axes = createAxes(gl, { bounds: bounds, ticks: ticks })
 var spikes = createSpikes(gl, {
   bounds: bounds
 })
