@@ -9,7 +9,7 @@ var createSpikes = require('gl-spikes3d')
 var createSelect = require('gl-select-static')
 var getBounds    = require('bound-points')
 var mouseChange  = require('mouse-change')
-var createMesh   = require('gl-mesh3d')
+var createMesh   = createStreamTubes.createTubeMesh;
 var vec3 = require('gl-vec3');
 
 var canvas = document.createElement('canvas')

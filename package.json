@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "gl-vec3": "^1.0.0",
+    "glsl-inverse": "^1.0.0",
     "glslify": "^2.1.2"
   },
   "devDependencies": {

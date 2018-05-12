@@ -15,11 +15,14 @@ const streamToTube = function(stream) {
 
 	var verts = [];
 	var faces = [];
+	var vectors = [];
 	var previousVerts = [];
 	var currentVerts = [];
 	var intensities = [];
 	var previousIntensity = 0;
 	var currentIntensity = 0;
+	var currentVector = vec3.create();
+	var previousVector = vec3.create();
 
 	var facets = 8;
 
@@ -28,25 +31,12 @@ const streamToTube = function(stream) {
 		fwd = velocities[i];
 		r = divergences[i];
 		currentIntensity = vec3.length(fwd);
-		vec3.cross(u, up, fwd);
-		vec3.normalize(u, u);
-		vec3.cross(v, u, fwd);
-		vec3.normalize(v, v);
+		currentVector = vec3.create();
+		vec3.normalize(currentVector, fwd);
+		vec3.scale(currentVector, currentVector, r);
+
 		for (var a = 0; a < facets; a++) {
-			var a0 = a/facets * Math.PI * 2;
-
-			var p0 = vec3.create();
-			vec3.add(p0, p0, u);
-			vec3.scale(p0, p0, Math.cos(a0) * r);
-
-			var p1 = vec3.create();
-			vec3.add(p1, p1, v);
-			vec3.scale(p1, p1, Math.sin(a0) * r);
-
-			vec3.add(p0, p0, p1);
-			vec3.add(p0, p0, p);
-
-			currentVerts[a] = p0;
+			currentVerts[a] = [p[0], p[1], p[2], a];
 		}
 		if (previousVerts.length > 0) {
 			for (var a = 0; a < facets; a++) {
@@ -59,6 +49,15 @@ const streamToTube = function(stream) {
 					currentVerts[a1],
 					previousVerts[a1],
 					previousVerts[a]
+				);
+				vectors.push(
+					previousVector,
+					currentVector,
+					currentVector,
+
+					currentVector,
+					previousVector,
+					previousVector
 				);
 				intensities.push(
 					previousIntensity,
@@ -78,6 +77,9 @@ const streamToTube = function(stream) {
 		var tmp = previousVerts;
 		previousVerts = currentVerts;
 		currentVerts = tmp;
+		tmp = previousVector;
+		previousVector = currentVector;
+		currentVector = tmp;
 		tmp = previousIntensity;
 		previousIntensity = currentIntensity;
 		currentIntensity = tmp;
@@ -85,6 +87,7 @@ const streamToTube = function(stream) {
 	return {
 		positions: verts,
 		cells: faces,
+		vectors: vectors,
 		vertexIntensity: intensities
 	};
 
@@ -94,17 +97,20 @@ const createTubes = function(streams, colormap) {
 	var tubes = streams.map(streamToTube);
 	var positions = [];
 	var cells = [];
+	var vectors = [];
 	var vertexIntensity = [];
 	for (var i=0; i < tubes.length; i++) {
 		var tube = tubes[i];
 		var offset = positions.length;
 		positions = positions.concat(tube.positions);
+		vectors = vectors.concat(tube.vectors);
 		vertexIntensity = vertexIntensity.concat(tube.vertexIntensity);
 		cells = cells.concat(tube.cells.map(cell => cell.map(c => c + offset)));
 	}
 	return {
 		positions: positions,
 		cells: cells,
+		vectors: vectors,
 		vertexIntensity: vertexIntensity,
 		colormap
 	};
@@ -412,3 +418,5 @@ module.exports = function(vectorField, bounds) {
 
 	return createTubes(streams, vectorField.colormap);
 };
+
+module.exports.createTubeMesh = require('./lib/tubemesh');
