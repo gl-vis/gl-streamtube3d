@@ -392,7 +392,10 @@ module.exports = function(vectorField, bounds) {
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
-		while (stream.length < maxLength && inBounds(bounds, p)) {
+		var j = 0;
+
+		while (j < maxLength * 100 && stream.length < maxLength && inBounds(bounds, p)) {
+			j++;
 			var np = vec3.clone(v);
 			var sqLen = vec3.squaredLength(np);
 			if (sqLen === 0) {
