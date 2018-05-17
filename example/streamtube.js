@@ -28,8 +28,8 @@ var cmpZYX = function(a, b) {
 };
 pvecs.sort(cmpZYX);
 
-var positions = pvecs.map(p => p.position);
-var vectors = pvecs.map(p => p.vector);
+var positions = pvecs.map(function(p) { return p.position; });
+var vectors = pvecs.map(function(p) { return p.vector; });
 
 var windBounds = getBounds(positions);
 
@@ -38,7 +38,10 @@ var startingPositions = meshgrid.toPoints(meshgrid(80, [20, 10, 50], [0, 5, 15])
 
 var mg = [[],[],[]]
 var mgi =[{},{},{}];
-positions.forEach(([x,y,z]) => {
+positions.forEach(function(p) {
+  var x = p[0];
+  var y = p[1];
+  var z = p[2];
   if (!mgi[0][x]) { mgi[0][x] = true; mg[0].push(x); }
   if (!mgi[1][y]) { mgi[1][y] = true; mg[1].push(y); }
   if (!mgi[2][z]) { mgi[2][z] = true; mg[2].push(z); }
@@ -55,7 +58,7 @@ var camera = createCamera(canvas, {
 })
 
 var streams = createStreamTubes({
-  startingPositions,
+  startingPositions: startingPositions,
   maxLength: 3000,
   widthScale: 500,
   meshgrid: mg,
@@ -66,7 +69,7 @@ var streams = createStreamTubes({
 var mesh = createMesh(gl, streams);
 var select = createSelect(gl, [canvas.width, canvas.height])
 var tickSpacing = 5;
-var ticks = bounds[0].map((v,i) => {
+var ticks = bounds[0].map(function(v,i) {
   var arr = [];
   var firstTick = Math.ceil(bounds[0][i] / tickSpacing) * tickSpacing;
   var lastTick = Math.floor(bounds[1][i] / tickSpacing) * tickSpacing;

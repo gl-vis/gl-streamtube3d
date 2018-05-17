@@ -1,10 +1,13 @@
 "use strict";
 
-const vec3 = require('gl-vec3');
-const vec4 = require('gl-vec4');
+var vec3 = require('gl-vec3');
+var vec4 = require('gl-vec4');
 
-const streamToTube = function(stream) {
-	const { points, velocities, divergences } = stream;
+var streamToTube = function(stream) {
+	var points = stream.points;
+	var velocities = stream.velocities;
+	var divergences = stream.divergences;
+
 	//if (points.length < 10) return {};
 	// debugger;
 	var p, fwd, r, u, v, up;
@@ -93,7 +96,7 @@ const streamToTube = function(stream) {
 
 };
 
-const createTubes = function(streams, colormap) {
+var createTubes = function(streams, colormap) {
 	var tubes = streams.map(streamToTube);
 	var positions = [];
 	var cells = [];
@@ -105,18 +108,25 @@ const createTubes = function(streams, colormap) {
 		positions = positions.concat(tube.positions);
 		vectors = vectors.concat(tube.vectors);
 		vertexIntensity = vertexIntensity.concat(tube.vertexIntensity);
-		cells = cells.concat(tube.cells.map(cell => cell.map(c => c + offset)));
+		for (var j=0; j<tube.cells.length; j++) {
+			var cell = tube.cells[j];
+			var newCell = [];
+			cells.push(newCell);
+			for (var k=0; k<cell.length; k++) {
+				newCell.push(cell[k] + offset);
+			}
+		}
 	}
 	return {
 		positions: positions,
 		cells: cells,
 		vectors: vectors,
 		vertexIntensity: vertexIntensity,
-		colormap
+		colormap: colormap
 	};
 };
 
-const defaultGetDivergence = function(p, v0, scale) {
+var defaultGetDivergence = function(p, v0, scale) {
 	var dp = vec3.create();
 	var e = 1/10000;
 
@@ -137,13 +147,13 @@ const defaultGetDivergence = function(p, v0, scale) {
 	return vec3.length(dp) * scale;
 };
 
-const defaultGetVelocity = function(p) {
+var defaultGetVelocity = function(p) {
     var u = sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders);
     return u;
 };
 
 
-const findLastSmallerIndex = function(points, v) {
+var findLastSmallerIndex = function(points, v) {
   for (var i=0; i<points.length; i++) {
   	var p = points[i];
   	if (p === v) return i;
@@ -152,17 +162,17 @@ const findLastSmallerIndex = function(points, v) {
   return i;
 };
 
-const tmp = vec3.create();
-const tmp2 = vec3.create();
+var tmp = vec3.create();
+var tmp2 = vec3.create();
 
-const clamp = function(v, min, max) {
+var clamp = function(v, min, max) {
 	return v < min ? min : (v > max ? max : v);
 };
 
-const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
-	const x = point[0];
-	const y = point[1];
-	const z = point[2];
+var sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
+	var x = point[0];
+	var y = point[1];
+	var z = point[2];
 
 	var w = meshgrid[0].length;
 	var h = meshgrid[1].length;
@@ -258,7 +268,7 @@ window.testSampleMeshGrid = function() {
 		}
 		meshgrid.push(a);
 	}
-	var dims = meshgrid.map(m => m.length);
+	var dims = meshgrid.map(function(m) { return m.length; });
 
 	// Generate random data for the meshgrid
 	var data = [];
@@ -363,11 +373,13 @@ module.exports = function(vectorField, bounds) {
 
 	var streams = [];
 
-	const [minX, minY, minZ] = bounds[0];
-	const [maxX, maxY, maxZ] = bounds[1];
+	var minX = bounds[0][0], minY = bounds[0][1], minZ = bounds[0][2];
+	var maxX = bounds[1][0], maxY = bounds[1][1], maxZ = bounds[1][2];
 
 	var inBounds = function(bounds, p) {
-		var [x,y,z] = p;
+		var x = p[0];
+		var y = p[1];
+		var z = p[2];
 		return (
 			x >= minX && x <= maxX &&
 			y >= minY && y <= maxY &&

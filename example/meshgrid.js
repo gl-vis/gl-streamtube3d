@@ -56,7 +56,10 @@ var meshgrid = function(xs, ys, zs) {
 };
 
 meshgrid.getBounds = function(mg) {
-  return [mg.map(m => m[0]), mg.map(m => m[m.length-1])];
+  return [
+    mg.map(function(m) { return m[0]; }), 
+    mg.map(function(m) { return m[m.length-1]; })
+  ];
 };
 
 meshgrid.toPoints = function(mg) {
