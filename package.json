@@ -9,7 +9,7 @@
   "dependencies": {
     "gl-vec3": "^1.0.0",
     "glsl-inverse": "^1.0.0",
-    "glslify": "^2.1.2"
+    "glslify": "^6.1.1"
   },
   "devDependencies": {
     "3d-view-controls": "^2.1.1",
