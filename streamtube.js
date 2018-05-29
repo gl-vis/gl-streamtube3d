@@ -297,9 +297,26 @@ var calculateMinPositionDistance = function(positions) {
 		// Using a uniqueness hash table, you're doing 1M array reads, 
 		// 3M hash table lookups from 100-element hashes, 300 hash table inserts, then
 		// sorting three 100-element arrays and iterating over them.
+		// Roughly, 1M + 3M * ln(100) + 300 * ln(100/2) + 3 * 100 * ln(100) + 3 * 100 = 
+		//          1M + 13.8M + 0.0012M +  0.0014M + 0.0003M 
+		//          =~ 15M
 		//
 		// Sort and uniq solution would do 1M array reads, 3M array inserts,
 		// sort three 1M-element arrays and iterate over them.
+		// Roughly, 1M + 3M + 3 * 1M * ln(1M) + 3 * 1M = 
+		//          1M + 3M + 41.4M + 3M 
+		//          =~ 48.4M
+		//
+		// Guessing that a hard-coded sort & uniq would be faster due to not having
+		// to run a hashing function on everything. More memory usage though 
+		// (bunch of small hash tables vs. duplicating the input array.)
+		//
+		// In JS-land, who knows. Maybe xi[x] casts x to string and destroys perf, 
+		// maybe numeric keys get special-cased, maybe the object lookups run at near O(1)-speeds.
+		// Maybe the sorting comparison function is expensive to call, maybe it gets inlined or special-cased.
+		//
+		// ... You're probably not going to call this with more than 10k positions anyhow, so this is very academic.
+		//
 		if (!xi[x]) {
 			xs.push(x);
 			xi[x] = true;
