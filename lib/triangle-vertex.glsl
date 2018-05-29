@@ -5,7 +5,6 @@ precision mediump float;
 attribute vec3 vector;
 attribute vec4 color, position;
 attribute vec2 uv;
-uniform float vectorScale;
 uniform float tubeScale;
 
 uniform mat4 model
@@ -64,7 +63,7 @@ void main() {
   // Scale the vector magnitude to stay constant with
   // model & view changes.
   vec3 normal;
-  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * ((vectorScale * tubeScale) * vector), position.w, normal), 0.0);
+  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * (tubeScale * vector), position.w, normal), 0.0);
   normal = normalize(normal * inverse(mat3(model)));
 
   vec4 t_position  = view * tubePosition;

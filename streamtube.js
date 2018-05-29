@@ -8,8 +8,6 @@ var streamToTube = function(stream) {
 	var velocities = stream.velocities;
 	var divergences = stream.divergences;
 
-	//if (points.length < 10) return {};
-	// debugger;
 	var p, fwd, r, u, v, up;
 	up = vec3.set(vec3.create(), 0, 1, 0);
 	u = vec3.create();
@@ -126,25 +124,28 @@ var createTubes = function(streams, colormap) {
 	};
 };
 
-var defaultGetDivergence = function(p, v0, scale) {
+var defaultGetDivergence = function(p, v0) {
 	var dp = vec3.create();
 	var e = 1/10000;
 
 	vec3.add(dp, p, [e, 0, 0]);
 	var vx = this.getVelocity(dp);
 	vec3.subtract(vx, vx, v0);
+	vec3.scale(vx, vx, 1/e);
 
 	vec3.add(dp, p, [0, e, 0]);
 	var vy = this.getVelocity(dp);
 	vec3.subtract(vy, vy, v0);
+	vec3.scale(vy, vy, 1/e);
 
 	vec3.add(dp, p, [0, 0, e]);
 	var vz = this.getVelocity(dp);
 	vec3.subtract(vz, vz, v0);
+	vec3.scale(vz, vz, 1/e);
 
 	vec3.add(dp, vx, vy);
 	vec3.add(dp, dp, vz);
-	return vec3.length(dp) * scale;
+	return dp;
 };
 
 var defaultGetVelocity = function(p) {
@@ -353,11 +354,78 @@ window.testSampleMeshGrid = function() {
 	}
 };
 
+var vabs = function(dst, v) {
+	var x = v[0];
+	var y = v[1];
+	var z = v[2];
+	dst[0] = x >= 0 ? x : -x;
+	dst[1] = y >= 0 ? y : -y;
+	dst[2] = z >= 0 ? z : -z;
+	return dst;
+};
+
+var findMinSeparation = function(xs) {
+	var minSeparation = 1/0;
+	xs.sort(function(a, b) { return a - b; });
+	for (var i=1; i<xs.length; i++) {
+		var d = Math.abs(xs[i] - xs[i-1]);
+		if (d < minSeparation) {
+			minSeparation = d;
+		}
+	}
+	return minSeparation;
+};
+
+// Finds the minimum per-component distance in positions.
+// 
+var calculateMinPositionDistance = function(positions) {
+	var xs = [], ys = [], zs = [];
+	var xi = {}, yi = {}, zi = {};
+	for (var i=0; i<positions.length; i++) {
+		var p = positions[i];
+		var x = p[0], y = p[1], z = p[2];
+
+		// Split the positions array into arrays of unique component values.
+		//
+		// Why go through the trouble of using a uniqueness hash table vs
+		// sort and uniq: 
+		//
+		// Suppose you've got a million positions in a 100x100x100 grid.
+		//
+		// Using a uniqueness hash table, you're doing 1M array reads, 
+		// 3M hash table lookups from 100-element hashes, 300 hash table inserts, then
+		// sorting three 100-element arrays and iterating over them.
+		//
+		// Sort and uniq solution would do 1M array reads, 3M array inserts,
+		// sort three 1M-element arrays and iterate over them.
+		if (!xi[x]) {
+			xs.push(x);
+			xi[x] = true;
+		}
+		if (!yi[y]) {
+			ys.push(y);
+			yi[y] = true;
+		}
+		if (!zi[z]) {
+			zs.push(z);
+			zi[z] = true;
+		}
+	}
+	var xSep = findMinSeparation(xs);
+	var ySep = findMinSeparation(ys);
+	var zSep = findMinSeparation(zs);
+	var minSeparation = Math.min(xSep, ySep, zSep);
+	if (!isFinite(minSeparation)) {
+		return 1;
+	}
+	return minSeparation;
+};
 
 module.exports = function(vectorField, bounds) {
 	var positions = vectorField.startingPositions;
 	var maxLength = vectorField.maxLength || 1000;
-	var widthScale = vectorField.widthScale || 1e4;
+	var tubeSize = vectorField.tubeSize || 1;
+	var absoluteTubeSize = vectorField.absoluteTubeSize;
 
 	if (!vectorField.getDivergence) {
 		vectorField.getDivergence = defaultGetDivergence;
@@ -391,6 +459,14 @@ module.exports = function(vectorField, bounds) {
 	var maxStepSize = 10 * boundsSize / maxLength;
 	var maxStepSizeSq = maxStepSize * maxStepSize;
 
+	var minDistance = 1;
+	var maxDivergence = vec3.create();
+	var tmp = vec3.create();
+
+	if (positions.length >= 2) {
+		minDistance = calculateMinPositionDistance(positions);
+	}
+
 	for (var i = 0; i < positions.length; i++) {
 		var p = vec3.create();
 		vec3.copy(p, positions[i]);
@@ -400,7 +476,9 @@ module.exports = function(vectorField, bounds) {
 		var v = vectorField.getVelocity(p);
 		var op = p;
 		velocities.push(v);
-		var divergences = [vectorField.getDivergence(p, v, widthScale)];
+		var divergence = vectorField.getDivergence(p, v);
+		vec3.max(maxDivergence, maxDivergence, vabs(tmp, divergence));
+		var divergences = [vec3.length(divergence)];
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
@@ -423,15 +501,22 @@ module.exports = function(vectorField, bounds) {
 				stream.push(np);
 				op = np;
 				velocities.push(v);
-				var dv = vectorField.getDivergence(np, v, widthScale);
-				divergences.push(dv);
+				var dv = vectorField.getDivergence(np, v);
+				vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
+				divergences.push(vec3.length(dv));
 			}
 
 			p = np;
 		}
 	}
 
-	return createTubes(streams, vectorField.colormap);
+	var tubes = createTubes(streams, vectorField.colormap);
+	if (absoluteTubeSize) {
+		tubes.tubeScale = absoluteTubeSize;
+	} else {
+		tubes.tubeScale = tubeSize * 0.5 * minDistance / vec3.length(maxDivergence);
+	}
+	return tubes;
 };
 
 module.exports.createTubeMesh = require('./lib/tubemesh');
