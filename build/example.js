@@ -2157,7 +2157,10 @@ var meshgrid = function(xs, ys, zs) {
 };
 
 meshgrid.getBounds = function(mg) {
-  return [mg.map(m => m[0]), mg.map(m => m[m.length-1])];
+  return [
+    mg.map(function(m) { return m[0]; }), 
+    mg.map(function(m) { return m[m.length-1]; })
+  ];
 };
 
 meshgrid.toPoints = function(mg) {
@@ -2207,8 +2210,8 @@ var cmpZYX = function(a, b) {
 };
 pvecs.sort(cmpZYX);
 
-var positions = pvecs.map(p => p.position);
-var vectors = pvecs.map(p => p.vector);
+var positions = pvecs.map(function(p) { return p.position; });
+var vectors = pvecs.map(function(p) { return p.vector; });
 
 var windBounds = getBounds(positions);
 
@@ -2217,7 +2220,10 @@ var startingPositions = meshgrid.toPoints(meshgrid(80, [20, 10, 50], [0, 5, 15])
 
 var mg = [[],[],[]]
 var mgi =[{},{},{}];
-positions.forEach(([x,y,z]) => {
+positions.forEach(function(p) {
+  var x = p[0];
+  var y = p[1];
+  var z = p[2];
   if (!mgi[0][x]) { mgi[0][x] = true; mg[0].push(x); }
   if (!mgi[1][y]) { mgi[1][y] = true; mg[1].push(y); }
   if (!mgi[2][z]) { mgi[2][z] = true; mg[2].push(z); }
@@ -2234,9 +2240,10 @@ var camera = createCamera(canvas, {
 })
 
 var streams = createStreamTubes({
-  startingPositions,
+  startingPositions: startingPositions,
   maxLength: 3000,
-  widthScale: 500,
+  tubeSize: 1,
+  //absoluteTubeSize: 0.1,
   meshgrid: mg,
   vectors: vectors,
   colormap: 'portland'
@@ -2245,7 +2252,7 @@ var streams = createStreamTubes({
 var mesh = createMesh(gl, streams);
 var select = createSelect(gl, [canvas.width, canvas.height])
 var tickSpacing = 5;
-var ticks = bounds[0].map((v,i) => {
+var ticks = bounds[0].map(function(v,i) {
   var arr = [];
   var firstTick = Math.ceil(bounds[0][i] / tickSpacing) * tickSpacing;
   var lastTick = Math.floor(bounds[1][i] / tickSpacing) * tickSpacing;
@@ -2408,7 +2415,7 @@ function closestPointToPickLocation(simplex, pixelCoord, model, view, projection
 },{"barycentric":18,"polytope-closest-point/lib/closest_point_2d.js":221}],10:[function(require,module,exports){
 
 
-var triVertSrc = "precision mediump float;\n#define GLSLIFY 1\n\nfloat inverse_1_0(float m) {\n  return 1.0 / m;\n}\n\nmat2 inverse_1_0(mat2 m) {\n  return mat2(m[1][1],-m[0][1],\n             -m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]);\n}\n\nmat3 inverse_1_0(mat3 m) {\n  float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2];\n  float a10 = m[1][0], a11 = m[1][1], a12 = m[1][2];\n  float a20 = m[2][0], a21 = m[2][1], a22 = m[2][2];\n\n  float b01 = a22 * a11 - a12 * a21;\n  float b11 = -a22 * a10 + a12 * a20;\n  float b21 = a21 * a10 - a11 * a20;\n\n  float det = a00 * b01 + a01 * b11 + a02 * b21;\n\n  return mat3(b01, (-a22 * a01 + a02 * a21), (a12 * a01 - a02 * a11),\n              b11, (a22 * a00 - a02 * a20), (-a12 * a00 + a02 * a10),\n              b21, (-a21 * a00 + a01 * a20), (a11 * a00 - a01 * a10)) / det;\n}\n\nmat4 inverse_1_0(mat4 m) {\n  float\n      a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],\n      a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],\n      a20 = m[2][0], a21 = m[2][1], a22 = m[2][2], a23 = m[2][3],\n      a30 = m[3][0], a31 = m[3][1], a32 = m[3][2], a33 = m[3][3],\n\n      b00 = a00 * a11 - a01 * a10,\n      b01 = a00 * a12 - a02 * a10,\n      b02 = a00 * a13 - a03 * a10,\n      b03 = a01 * a12 - a02 * a11,\n      b04 = a01 * a13 - a03 * a11,\n      b05 = a02 * a13 - a03 * a12,\n      b06 = a20 * a31 - a21 * a30,\n      b07 = a20 * a32 - a22 * a30,\n      b08 = a20 * a33 - a23 * a30,\n      b09 = a21 * a32 - a22 * a31,\n      b10 = a21 * a33 - a23 * a31,\n      b11 = a22 * a33 - a23 * a32,\n\n      det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;\n\n  return mat4(\n      a11 * b11 - a12 * b10 + a13 * b09,\n      a02 * b10 - a01 * b11 - a03 * b09,\n      a31 * b05 - a32 * b04 + a33 * b03,\n      a22 * b04 - a21 * b05 - a23 * b03,\n      a12 * b08 - a10 * b11 - a13 * b07,\n      a00 * b11 - a02 * b08 + a03 * b07,\n      a32 * b02 - a30 * b05 - a33 * b01,\n      a20 * b05 - a22 * b02 + a23 * b01,\n      a10 * b10 - a11 * b08 + a13 * b06,\n      a01 * b08 - a00 * b10 - a03 * b06,\n      a30 * b04 - a31 * b02 + a33 * b00,\n      a21 * b02 - a20 * b04 - a23 * b00,\n      a11 * b07 - a10 * b09 - a12 * b06,\n      a00 * b09 - a01 * b07 + a02 * b06,\n      a31 * b01 - a30 * b03 - a32 * b00,\n      a20 * b03 - a21 * b01 + a22 * b00) / det;\n}\n\n\n\nattribute vec3 vector;\nattribute vec4 color, position;\nattribute vec2 uv;\nuniform float vectorScale;\nuniform float tubeScale;\n\nuniform mat4 model\n           , view\n           , projection;\nuniform vec3 eyePosition\n           , lightPosition;\n\nvarying vec3 f_normal\n           , f_lightDirection\n           , f_eyeDirection\n           , f_data;\nvarying vec4 f_color;\nvarying vec2 f_uv;\n\n\nvec3 getOrthogonalVector(vec3 v) {\n  // Return up-vector for only-z vector.\n  // Return ax + by + cz = 0, a point that lies on the plane that has v as a normal and that isn't (0,0,0).\n  // From the above if-statement we have ||a|| > 0  U  ||b|| > 0.\n  // Assign z = 0, x = -b, y = a:\n  // a*-b + b*a + c*0 = -ba + ba + 0 = 0\n  if (v.x*v.x > v.z*v.z || v.y*v.y > v.z*v.z) {\n    return normalize(vec3(-v.y, v.x, 0.0)); \n  } else {\n    return normalize(vec3(0.0, v.z, -v.y));\n  }\n}\n\n// Calculate the tube vertex and normal at the given index.\n//\n// The returned vertex is for a tube ring with its center at origin, radius of length(d), pointing in the direction of d.\n//\n// Each tube segment is made up of a ring of vertices.\n// These vertices are used to make up the triangles of the tube by connecting them together in the vertex array.\n// The indexes of tube segments run from 0 to 8.\n//\nvec3 getTubePosition(vec3 d, float index, out vec3 normal) {\n  float segmentCount = 8.0;\n\n  float angle = 2.0 * 3.14159 * (index / segmentCount);\n\n  vec3 u = getOrthogonalVector(d);\n  vec3 v = normalize(cross(u, d));\n\n  vec3 x = u * cos(angle) * length(d);\n  vec3 y = v * sin(angle) * length(d);\n  vec3 v3 = x + y;\n\n  normal = normalize(v3);\n\n  return v3;\n}\n\nvoid main() {\n  // Scale the vector magnitude to stay constant with\n  // model & view changes.\n  vec3 normal;\n  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * ((vectorScale * tubeScale) * vector), position.w, normal), 0.0);\n  normal = normalize(normal * inverse_1_0(mat3(model)));\n\n  vec4 t_position  = view * tubePosition;\n  gl_Position      = projection * t_position;\n  f_color          = color;\n  f_normal         = normal;\n  f_data           = tubePosition.xyz;\n  f_eyeDirection   = eyePosition   - tubePosition.xyz;\n  f_lightDirection = lightPosition - tubePosition.xyz;\n  f_uv             = uv;\n}"
+var triVertSrc = "precision mediump float;\n#define GLSLIFY 1\n\nfloat inverse_1_0(float m) {\n  return 1.0 / m;\n}\n\nmat2 inverse_1_0(mat2 m) {\n  return mat2(m[1][1],-m[0][1],\n             -m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]);\n}\n\nmat3 inverse_1_0(mat3 m) {\n  float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2];\n  float a10 = m[1][0], a11 = m[1][1], a12 = m[1][2];\n  float a20 = m[2][0], a21 = m[2][1], a22 = m[2][2];\n\n  float b01 = a22 * a11 - a12 * a21;\n  float b11 = -a22 * a10 + a12 * a20;\n  float b21 = a21 * a10 - a11 * a20;\n\n  float det = a00 * b01 + a01 * b11 + a02 * b21;\n\n  return mat3(b01, (-a22 * a01 + a02 * a21), (a12 * a01 - a02 * a11),\n              b11, (a22 * a00 - a02 * a20), (-a12 * a00 + a02 * a10),\n              b21, (-a21 * a00 + a01 * a20), (a11 * a00 - a01 * a10)) / det;\n}\n\nmat4 inverse_1_0(mat4 m) {\n  float\n      a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],\n      a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],\n      a20 = m[2][0], a21 = m[2][1], a22 = m[2][2], a23 = m[2][3],\n      a30 = m[3][0], a31 = m[3][1], a32 = m[3][2], a33 = m[3][3],\n\n      b00 = a00 * a11 - a01 * a10,\n      b01 = a00 * a12 - a02 * a10,\n      b02 = a00 * a13 - a03 * a10,\n      b03 = a01 * a12 - a02 * a11,\n      b04 = a01 * a13 - a03 * a11,\n      b05 = a02 * a13 - a03 * a12,\n      b06 = a20 * a31 - a21 * a30,\n      b07 = a20 * a32 - a22 * a30,\n      b08 = a20 * a33 - a23 * a30,\n      b09 = a21 * a32 - a22 * a31,\n      b10 = a21 * a33 - a23 * a31,\n      b11 = a22 * a33 - a23 * a32,\n\n      det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;\n\n  return mat4(\n      a11 * b11 - a12 * b10 + a13 * b09,\n      a02 * b10 - a01 * b11 - a03 * b09,\n      a31 * b05 - a32 * b04 + a33 * b03,\n      a22 * b04 - a21 * b05 - a23 * b03,\n      a12 * b08 - a10 * b11 - a13 * b07,\n      a00 * b11 - a02 * b08 + a03 * b07,\n      a32 * b02 - a30 * b05 - a33 * b01,\n      a20 * b05 - a22 * b02 + a23 * b01,\n      a10 * b10 - a11 * b08 + a13 * b06,\n      a01 * b08 - a00 * b10 - a03 * b06,\n      a30 * b04 - a31 * b02 + a33 * b00,\n      a21 * b02 - a20 * b04 - a23 * b00,\n      a11 * b07 - a10 * b09 - a12 * b06,\n      a00 * b09 - a01 * b07 + a02 * b06,\n      a31 * b01 - a30 * b03 - a32 * b00,\n      a20 * b03 - a21 * b01 + a22 * b00) / det;\n}\n\n\n\nattribute vec3 vector;\nattribute vec4 color, position;\nattribute vec2 uv;\nuniform float tubeScale;\n\nuniform mat4 model\n           , view\n           , projection;\nuniform vec3 eyePosition\n           , lightPosition;\n\nvarying vec3 f_normal\n           , f_lightDirection\n           , f_eyeDirection\n           , f_data;\nvarying vec4 f_color;\nvarying vec2 f_uv;\n\n\nvec3 getOrthogonalVector(vec3 v) {\n  // Return up-vector for only-z vector.\n  // Return ax + by + cz = 0, a point that lies on the plane that has v as a normal and that isn't (0,0,0).\n  // From the above if-statement we have ||a|| > 0  U  ||b|| > 0.\n  // Assign z = 0, x = -b, y = a:\n  // a*-b + b*a + c*0 = -ba + ba + 0 = 0\n  if (v.x*v.x > v.z*v.z || v.y*v.y > v.z*v.z) {\n    return normalize(vec3(-v.y, v.x, 0.0)); \n  } else {\n    return normalize(vec3(0.0, v.z, -v.y));\n  }\n}\n\n// Calculate the tube vertex and normal at the given index.\n//\n// The returned vertex is for a tube ring with its center at origin, radius of length(d), pointing in the direction of d.\n//\n// Each tube segment is made up of a ring of vertices.\n// These vertices are used to make up the triangles of the tube by connecting them together in the vertex array.\n// The indexes of tube segments run from 0 to 8.\n//\nvec3 getTubePosition(vec3 d, float index, out vec3 normal) {\n  float segmentCount = 8.0;\n\n  float angle = 2.0 * 3.14159 * (index / segmentCount);\n\n  vec3 u = getOrthogonalVector(d);\n  vec3 v = normalize(cross(u, d));\n\n  vec3 x = u * cos(angle) * length(d);\n  vec3 y = v * sin(angle) * length(d);\n  vec3 v3 = x + y;\n\n  normal = normalize(v3);\n\n  return v3;\n}\n\nvoid main() {\n  // Scale the vector magnitude to stay constant with\n  // model & view changes.\n  vec3 normal;\n  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * (tubeScale * vector), position.w, normal), 0.0);\n  normal = normalize(normal * inverse_1_0(mat3(model)));\n\n  vec4 t_position  = view * tubePosition;\n  gl_Position      = projection * t_position;\n  f_color          = color;\n  f_normal         = normal;\n  f_data           = tubePosition.xyz;\n  f_eyeDirection   = eyePosition   - tubePosition.xyz;\n  f_lightDirection = lightPosition - tubePosition.xyz;\n  f_uv             = uv;\n}"
 var triFragSrc = "precision mediump float;\n#define GLSLIFY 1\n\nfloat beckmannDistribution_2_0(float x, float roughness) {\n  float NdotH = max(x, 0.0001);\n  float cos2Alpha = NdotH * NdotH;\n  float tan2Alpha = (cos2Alpha - 1.0) / cos2Alpha;\n  float roughness2 = roughness * roughness;\n  float denom = 3.141592653589793 * roughness2 * cos2Alpha * cos2Alpha;\n  return exp(tan2Alpha / roughness2) / denom;\n}\n\n\n\nfloat cookTorranceSpecular_1_1(\n  vec3 lightDirection,\n  vec3 viewDirection,\n  vec3 surfaceNormal,\n  float roughness,\n  float fresnel) {\n\n  float VdotN = max(dot(viewDirection, surfaceNormal), 0.0);\n  float LdotN = max(dot(lightDirection, surfaceNormal), 0.0);\n\n  //Half angle vector\n  vec3 H = normalize(lightDirection + viewDirection);\n\n  //Geometric term\n  float NdotH = max(dot(surfaceNormal, H), 0.0);\n  float VdotH = max(dot(viewDirection, H), 0.000001);\n  float LdotH = max(dot(lightDirection, H), 0.000001);\n  float G1 = (2.0 * NdotH * VdotN) / VdotH;\n  float G2 = (2.0 * NdotH * LdotN) / LdotH;\n  float G = min(1.0, min(G1, G2));\n  \n  //Distribution term\n  float D = beckmannDistribution_2_0(NdotH, roughness);\n\n  //Fresnel term\n  float F = pow(1.0 - VdotN, fresnel);\n\n  //Multiply terms and done\n  return  G * F * D / max(3.14159265 * VdotN, 0.000001);\n}\n\n\n\nuniform vec3 clipBounds[2];\nuniform float roughness\n            , fresnel\n            , kambient\n            , kdiffuse\n            , kspecular\n            , opacity;\nuniform sampler2D texture;\n\nvarying vec3 f_normal\n           , f_lightDirection\n           , f_eyeDirection\n           , f_data;\nvarying vec4 f_color;\nvarying vec2 f_uv;\n\nvoid main() {\n  vec3 N = normalize(f_normal);\n  vec3 L = normalize(f_lightDirection);\n  vec3 V = normalize(f_eyeDirection);\n  \n  if(!gl_FrontFacing) {\n    N = -N;\n  }\n\n  float specular = cookTorranceSpecular_1_1(L, V, N, roughness, fresnel);\n  float diffuse  = min(kambient + kdiffuse * max(dot(N, L), 0.0), 1.0);\n\n  vec4 surfaceColor =  texture2D(texture, f_uv);\n  vec4 litColor = surfaceColor.a * vec4(diffuse * surfaceColor.rgb + kspecular * vec3(1,1,1) * specular,  1.0);\n\n  gl_FragColor = litColor * opacity;\n}"
 var pickVertSrc = "precision mediump float;\n#define GLSLIFY 1\n\nattribute vec3 position;\nattribute vec4 id;\n\nuniform mat4 model, view, projection;\n\nvarying vec3 f_position;\nvarying vec4 f_id;\n\nvoid main() {\n  gl_Position = projection * view * model * vec4(position, 1.0);\n  f_id        = id;\n  f_position  = position;\n}"
 var pickFragSrc = "precision mediump float;\n#define GLSLIFY 1\n\nuniform vec3  clipBounds[2];\nuniform float pickId;\n\nvarying vec3 f_position;\nvarying vec4 f_id;\n\nvoid main() {\n  gl_FragColor = vec4(pickId, f_id.xyz);\n}"
@@ -2554,8 +2561,7 @@ function SimplicialMesh(gl
 
   this.opacity       = 1.0
 
-  this.tubeScale     = 2.0
-  this.vectorScale   = 1.0
+  this.tubeScale     = 1.0
 
   this._model       = identityMatrix
   this._view        = identityMatrix
@@ -2713,10 +2719,7 @@ proto.update = function(params) {
     return
   }
 
-  if (params.vectorScale) {
-    this.vectorScale = params.vectorScale;
-  }
-  if (params.tubeScale) {
+  if (params.tubeScale !== undefined) {
     this.tubeScale = params.tubeScale;
   }
 
@@ -3072,7 +3075,6 @@ proto.drawTransparent = proto.draw = function(params) {
 
     opacity:  this.opacity,
 
-    vectorScale: this.vectorScale,
     tubeScale: this.tubeScale,
 
     contourColor: this.contourColor,
@@ -3172,7 +3174,6 @@ proto.drawPick = function(params) {
     projection: projection,
     clipBounds: clipBounds,
 
-    vectorScale: this.vectorScale,
     tubeScale: this.tubeScale,
 
     pickId:     this.pickId / 255.0,
@@ -3249,7 +3250,6 @@ proto.pick = function(pickData) {
     cellId:   cellId,
     intensity:  interpIntensity,
 
-    vectorScale: this.vectorScale,
     tubeScale: this.tubeScale,
 
     dataCoordinate: this.positions[cell[data[0]]]
@@ -3293,7 +3293,7 @@ proto.dispose = function() {
 }
 
 function createMeshShader(gl) {
-  var shader = createShader(gl, meshShader.vertex, meshShader.fragment)
+  var shader = createShader(gl, meshShader.vertex, meshShader.fragment, null, meshShader.attributes)
   shader.attributes.position.location = 0
   shader.attributes.color.location    = 2
   shader.attributes.uv.location       = 3
@@ -30951,13 +30951,14 @@ function findZeroCrossings(array, level) {
 },{"./lib/zc-core":265}],267:[function(require,module,exports){
 "use strict";
 
-const vec3 = require('gl-vec3');
-const vec4 = require('gl-vec4');
+var vec3 = require('gl-vec3');
+var vec4 = require('gl-vec4');
 
-const streamToTube = function(stream) {
-	const { points, velocities, divergences } = stream;
-	//if (points.length < 10) return {};
-	// debugger;
+var streamToTube = function(stream) {
+	var points = stream.points;
+	var velocities = stream.velocities;
+	var divergences = stream.divergences;
+
 	var p, fwd, r, u, v, up;
 	up = vec3.set(vec3.create(), 0, 1, 0);
 	u = vec3.create();
@@ -31044,7 +31045,7 @@ const streamToTube = function(stream) {
 
 };
 
-const createTubes = function(streams, colormap) {
+var createTubes = function(streams, colormap) {
 	var tubes = streams.map(streamToTube);
 	var positions = [];
 	var cells = [];
@@ -31056,45 +31057,55 @@ const createTubes = function(streams, colormap) {
 		positions = positions.concat(tube.positions);
 		vectors = vectors.concat(tube.vectors);
 		vertexIntensity = vertexIntensity.concat(tube.vertexIntensity);
-		cells = cells.concat(tube.cells.map(cell => cell.map(c => c + offset)));
+		for (var j=0; j<tube.cells.length; j++) {
+			var cell = tube.cells[j];
+			var newCell = [];
+			cells.push(newCell);
+			for (var k=0; k<cell.length; k++) {
+				newCell.push(cell[k] + offset);
+			}
+		}
 	}
 	return {
 		positions: positions,
 		cells: cells,
 		vectors: vectors,
 		vertexIntensity: vertexIntensity,
-		colormap
+		colormap: colormap
 	};
 };
 
-const defaultGetDivergence = function(p, v0, scale) {
+var defaultGetDivergence = function(p, v0) {
 	var dp = vec3.create();
 	var e = 1/10000;
 
 	vec3.add(dp, p, [e, 0, 0]);
 	var vx = this.getVelocity(dp);
 	vec3.subtract(vx, vx, v0);
+	vec3.scale(vx, vx, 1/e);
 
 	vec3.add(dp, p, [0, e, 0]);
 	var vy = this.getVelocity(dp);
 	vec3.subtract(vy, vy, v0);
+	vec3.scale(vy, vy, 1/e);
 
 	vec3.add(dp, p, [0, 0, e]);
 	var vz = this.getVelocity(dp);
 	vec3.subtract(vz, vz, v0);
+	vec3.scale(vz, vz, 1/e);
 
 	vec3.add(dp, vx, vy);
 	vec3.add(dp, dp, vz);
-	return vec3.length(dp) * scale;
+	return dp;
 };
 
-const defaultGetVelocity = function(p) {
+var defaultGetVelocity = function(p) {
     var u = sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders);
     return u;
 };
 
 
-const findLastSmallerIndex = function(points, v) {
+var findLastSmallerIndex = function(points, v) {
   for (var i=0; i<points.length; i++) {
   	var p = points[i];
   	if (p === v) return i;
@@ -31103,17 +31114,17 @@ const findLastSmallerIndex = function(points, v) {
   return i;
 };
 
-const tmp = vec3.create();
-const tmp2 = vec3.create();
+var tmp = vec3.create();
+var tmp2 = vec3.create();
 
-const clamp = function(v, min, max) {
+var clamp = function(v, min, max) {
 	return v < min ? min : (v > max ? max : v);
 };
 
-const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
-	const x = point[0];
-	const y = point[1];
-	const z = point[2];
+var sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
+	var x = point[0];
+	var y = point[1];
+	var z = point[2];
 
 	var w = meshgrid[0].length;
 	var h = meshgrid[1].length;
@@ -31195,110 +31206,79 @@ const sampleMeshgrid = function(point, array, meshgrid, clampOverflow) {
 	return result;
 };
 
-window.testSampleMeshGrid = function() {
 
-	// Generate random meshgrid
-	var meshgrid = [];
-	for (var i=0; i<3; i++) {
-		var a = [];
-		var alen = Math.floor(Math.random() * 30 + 1);
-		var c = Math.random() * 100 - 50;
-		for (var j=0; j<alen; j++) {
-			a.push(c);
-			c += Math.random()*10 + 0.1;
-		}
-		meshgrid.push(a);
-	}
-	var dims = meshgrid.map(m => m.length);
-
-	// Generate random data for the meshgrid
-	var data = [];
-	for (var z=0; z<meshgrid[2].length; z++) {
-		for (var y=0; y<meshgrid[1].length; y++) {
-			for (var x=0; x<meshgrid[0].length; x++) {
-				data.push([
-					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0,
-					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0,
-					Math.random() > 0.2 ? Math.random() * 10 - 5 : 0
-				]);
-			}
-		}
-	}
-
-	// Point to point equivalence
-	for (var z=0; z<meshgrid[2].length; z++) {
-		for (var y=0; y<meshgrid[1].length; y++) {
-			for (var x=0; x<meshgrid[0].length; x++) {
-				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
-				var sampled = sampleMeshgrid(point, data, meshgrid, true);
-				var dataValue = data[
-					z * meshgrid[1].length * meshgrid[0].length +
-					y * meshgrid[0].length +
-					x
-				];
-				if (vec3.squaredDistance(sampled, dataValue) > 0.0001) {
-					console.log('index', [x,y,z], 'dims', dims, 'sampled', sampled, 'data', dataValue, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "clampOverflow")
-					throw new Error("sampleMeshgrid sampling disagrees with raw data sample")
-				}
-				sampled = sampleMeshgrid([meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]], data, meshgrid, false);
-				if (vec3.squaredDistance(sampled, dataValue) > 0.0001) {
-					console.log('index', [x,y,z], 'dims', dims, 'sampled', sampled, 'data', dataValue, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "no clampOverflow")
-					throw new Error("sampleMeshgrid sampling disagrees with raw data sample")
-				}
-			}
-		}
-	}
-
-	// Gradient property
-	for (var z=0; z<meshgrid[2].length-1; z++) {
-		for (var y=0; y<meshgrid[1].length-1; y++) {
-			for (var x=0; x<meshgrid[0].length-1; x++) {
-				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
-				var point2 = [meshgrid[0][x+1], meshgrid[1][y+1], meshgrid[2][z+1]];
-				var p1 = vec3.lerp(point, point2, 0.25);
-				var p2 = vec3.lerp(point, point2, 0.75);
-				var s0 = sampleMeshgrid(point, data, meshgrid, true);
-				var s1 = sampleMeshgrid(p1, data, meshgrid, true);
-				var s2 = sampleMeshgrid(p2, data, meshgrid, true);
-				var s3 = sampleMeshgrid(point2, data, meshgrid, true);
-				if (vec3.squaredDistance(s0, s1) > vec3.squaredDistance(s0, s2) ||
-					vec3.squaredDistance(s2, s3) > vec3.squaredDistance(s1, s3)
-				) {
-					console.log('index', [x,y,z], 'dims', dims, s0, s1, s2, s3, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "clampOverflow")
-					throw new Error("sampleMeshgrid sampling gradient is reversed")
-				}
-			}
-		}
-	}
-
-	// Gradient property, no border clamping
-	for (var z=0; z<meshgrid[2].length-1; z++) {
-		for (var y=0; y<meshgrid[1].length-1; y++) {
-			for (var x=0; x<meshgrid[0].length-1; x++) {
-				var point = [meshgrid[0][x], meshgrid[1][y], meshgrid[2][z]];
-				var point2 = [meshgrid[0][x+1], meshgrid[1][y+1], meshgrid[2][z+1]];
-				var p1 = vec3.lerp(point, point2, 0.25);
-				var p2 = vec3.lerp(point, point2, 0.75);
-				var s0 = sampleMeshgrid(point, data, meshgrid, false);
-				var s1 = sampleMeshgrid(p1, data, meshgrid, false);
-				var s2 = sampleMeshgrid(p2, data, meshgrid, false);
-				var s3 = sampleMeshgrid(point2, data, meshgrid, false);
-				if (vec3.squaredDistance(s0, s1) > vec3.squaredDistance(s0, s2) ||
-					vec3.squaredDistance(s2, s3) > vec3.squaredDistance(s1, s3)
-				) {
-					console.log('index', [x,y,z], 'dims', dims, s0, s1, s2, s3, 'point coords', point, 'meshgrid', meshgrid, 'data', data, "no clampOverflow")
-					throw new Error("sampleMeshgrid sampling gradient is reversed")
-				}
-			}
-		}
-	}
+var vabs = function(dst, v) {
+	var x = v[0];
+	var y = v[1];
+	var z = v[2];
+	dst[0] = x >= 0 ? x : -x;
+	dst[1] = y >= 0 ? y : -y;
+	dst[2] = z >= 0 ? z : -z;
+	return dst;
 };
 
+var findMinSeparation = function(xs) {
+	var minSeparation = 1/0;
+	xs.sort(function(a, b) { return a - b; });
+	for (var i=1; i<xs.length; i++) {
+		var d = Math.abs(xs[i] - xs[i-1]);
+		if (d < minSeparation) {
+			minSeparation = d;
+		}
+	}
+	return minSeparation;
+};
+
+// Finds the minimum per-component distance in positions.
+// 
+var calculateMinPositionDistance = function(positions) {
+	var xs = [], ys = [], zs = [];
+	var xi = {}, yi = {}, zi = {};
+	for (var i=0; i<positions.length; i++) {
+		var p = positions[i];
+		var x = p[0], y = p[1], z = p[2];
+
+		// Split the positions array into arrays of unique component values.
+		//
+		// Why go through the trouble of using a uniqueness hash table vs
+		// sort and uniq: 
+		//
+		// Suppose you've got a million positions in a 100x100x100 grid.
+		//
+		// Using a uniqueness hash table, you're doing 1M array reads, 
+		// 3M hash table lookups from 100-element hashes, 300 hash table inserts, then
+		// sorting three 100-element arrays and iterating over them.
+		//
+		// Sort and uniq solution would do 1M array reads, 3M array inserts,
+		// sort three 1M-element arrays and iterate over them.
+		if (!xi[x]) {
+			xs.push(x);
+			xi[x] = true;
+		}
+		if (!yi[y]) {
+			ys.push(y);
+			yi[y] = true;
+		}
+		if (!zi[z]) {
+			zs.push(z);
+			zi[z] = true;
+		}
+	}
+	var xSep = findMinSeparation(xs);
+	var ySep = findMinSeparation(ys);
+	var zSep = findMinSeparation(zs);
+	var minSeparation = Math.min(xSep, ySep, zSep);
+	if (!isFinite(minSeparation)) {
+		return 1;
+	}
+	return minSeparation;
+};
 
 module.exports = function(vectorField, bounds) {
 	var positions = vectorField.startingPositions;
 	var maxLength = vectorField.maxLength || 1000;
-	var widthScale = vectorField.widthScale || 1e4;
+	var tubeSize = vectorField.tubeSize || 1;
+	var absoluteTubeSize = vectorField.absoluteTubeSize;
 
 	if (!vectorField.getDivergence) {
 		vectorField.getDivergence = defaultGetDivergence;
@@ -31314,11 +31294,13 @@ module.exports = function(vectorField, bounds) {
 
 	var streams = [];
 
-	const [minX, minY, minZ] = bounds[0];
-	const [maxX, maxY, maxZ] = bounds[1];
+	var minX = bounds[0][0], minY = bounds[0][1], minZ = bounds[0][2];
+	var maxX = bounds[1][0], maxY = bounds[1][1], maxZ = bounds[1][2];
 
 	var inBounds = function(bounds, p) {
-		var [x,y,z] = p;
+		var x = p[0];
+		var y = p[1];
+		var z = p[2];
 		return (
 			x >= minX && x <= maxX &&
 			y >= minY && y <= maxY &&
@@ -31330,6 +31312,14 @@ module.exports = function(vectorField, bounds) {
 	var maxStepSize = 10 * boundsSize / maxLength;
 	var maxStepSizeSq = maxStepSize * maxStepSize;
 
+	var minDistance = 1;
+	var maxDivergence = 0; // For component-wise divergence vec3.create();
+	var tmp = vec3.create();
+
+	if (positions.length >= 2) {
+		minDistance = calculateMinPositionDistance(positions);
+	}
+
 	for (var i = 0; i < positions.length; i++) {
 		var p = vec3.create();
 		vec3.copy(p, positions[i]);
@@ -31339,11 +31329,24 @@ module.exports = function(vectorField, bounds) {
 		var v = vectorField.getVelocity(p);
 		var op = p;
 		velocities.push(v);
-		var divergences = [vectorField.getDivergence(p, v, widthScale)];
+
+		var divergences = [];
+
+		var dv = vectorField.getDivergence(p, v);
+		var dvLength = vec3.length(dv);
+		if (dvLength > maxDivergence) {
+			maxDivergence = dvLength;
+		}
+		// In case we need to do component-wise divergence visualization
+		// vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
+		divergences.push(dvLength);
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
-		while (stream.length < maxLength && inBounds(bounds, p)) {
+		var j = 0;
+
+		while (j < maxLength * 100 && stream.length < maxLength && inBounds(bounds, p)) {
+			j++;
 			var np = vec3.clone(v);
 			var sqLen = vec3.squaredLength(np);
 			if (sqLen === 0) {
@@ -31359,16 +31362,29 @@ module.exports = function(vectorField, bounds) {
 				stream.push(np);
 				op = np;
 				velocities.push(v);
-				var dv = vectorField.getDivergence(np, v, widthScale);
-				divergences.push(dv);
+				var dv = vectorField.getDivergence(np, v);
+				var dvLength = vec3.length(dv);
+				if (dvLength > maxDivergence) {
+					maxDivergence = dvLength;
+				}
+				// In case we need to do component-wise divergence visualization
+				//vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
+				divergences.push(dvLength);
 			}
 
 			p = np;
 		}
 	}
 
-	return createTubes(streams, vectorField.colormap);
+	var tubes = createTubes(streams, vectorField.colormap);
+	if (absoluteTubeSize) {
+		tubes.tubeScale = absoluteTubeSize;
+	} else {
+		tubes.tubeScale = tubeSize * 0.5 * minDistance / maxDivergence;
+	}
+	return tubes;
 };
 
 module.exports.createTubeMesh = require('./lib/tubemesh');
+
 },{"./lib/tubemesh":11,"gl-vec3":132,"gl-vec4":162}]},{},[8]);
