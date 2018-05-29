@@ -60,7 +60,8 @@ var camera = createCamera(canvas, {
 var streams = createStreamTubes({
   startingPositions: startingPositions,
   maxLength: 3000,
-  absoluteTubeSize: 0.2,
+  tubeSize: 1,
+  //absoluteTubeSize: 0.1,
   meshgrid: mg,
   vectors: vectors,
   colormap: 'portland'
