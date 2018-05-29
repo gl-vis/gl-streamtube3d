@@ -31313,7 +31313,7 @@ module.exports = function(vectorField, bounds) {
 	var maxStepSizeSq = maxStepSize * maxStepSize;
 
 	var minDistance = 1;
-	var maxDivergence = vec3.create();
+	var maxDivergence = 0; // For component-wise divergence vec3.create();
 	var tmp = vec3.create();
 
 	if (positions.length >= 2) {
@@ -31329,9 +31329,17 @@ module.exports = function(vectorField, bounds) {
 		var v = vectorField.getVelocity(p);
 		var op = p;
 		velocities.push(v);
-		var divergence = vectorField.getDivergence(p, v);
-		vec3.max(maxDivergence, maxDivergence, vabs(tmp, divergence));
-		var divergences = [vec3.length(divergence)];
+
+		var divergences = [];
+
+		var dv = vectorField.getDivergence(p, v);
+		var dvLength = vec3.length(dv);
+		if (dvLength > maxDivergence) {
+			maxDivergence = dvLength;
+		}
+		// In case we need to do component-wise divergence visualization
+		// vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
+		divergences.push(dvLength);
 
 		streams.push({points: stream, velocities: velocities, divergences: divergences});
 
@@ -31355,8 +31363,13 @@ module.exports = function(vectorField, bounds) {
 				op = np;
 				velocities.push(v);
 				var dv = vectorField.getDivergence(np, v);
-				vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
-				divergences.push(vec3.length(dv));
+				var dvLength = vec3.length(dv);
+				if (dvLength > maxDivergence) {
+					maxDivergence = dvLength;
+				}
+				// In case we need to do component-wise divergence visualization
+				//vec3.max(maxDivergence, maxDivergence, vabs(tmp, dv));
+				divergences.push(dvLength);
 			}
 
 			p = np;
@@ -31367,7 +31380,7 @@ module.exports = function(vectorField, bounds) {
 	if (absoluteTubeSize) {
 		tubes.tubeScale = absoluteTubeSize;
 	} else {
-		tubes.tubeScale = tubeSize * 0.5 * minDistance / vec3.length(maxDivergence);
+		tubes.tubeScale = tubeSize * 0.5 * minDistance / maxDivergence;
 	}
 	return tubes;
 };
