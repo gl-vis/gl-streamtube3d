@@ -3,7 +3,7 @@
 var vec3 = require('gl-vec3');
 var vec4 = require('gl-vec4');
 
-var streamToTube = function(stream) {
+var streamToTube = function(stream, maxDivergence, minDistance) {
 	var points = stream.points;
 	var velocities = stream.velocities;
 	var divergences = stream.divergences;
@@ -31,6 +31,9 @@ var streamToTube = function(stream) {
 		p = points[i];
 		fwd = velocities[i];
 		r = divergences[i];
+		if (maxDivergence === 0) {
+			r = minDistance * 0.05;
+		}
 		currentIntensity = vec3.length(fwd);
 		currentVector = vec3.create();
 		vec3.normalize(currentVector, fwd);
@@ -94,8 +97,10 @@ var streamToTube = function(stream) {
 
 };
 
-var createTubes = function(streams, colormap) {
-	var tubes = streams.map(streamToTube);
+var createTubes = function(streams, colormap, maxDivergence, minDistance) {
+	var tubes = streams.map(function(s) {
+		return streamToTube(s, maxDivergence, minDistance);
+	});
 	var positions = [];
 	var cells = [];
 	var vectors = [];
@@ -450,7 +455,8 @@ module.exports = function(vectorField, bounds) {
 		}
 	}
 
-	var tubes = createTubes(streams, vectorField.colormap);
+	var tubes = createTubes(streams, vectorField.colormap, maxDivergence, minDistance);
+
 	if (absoluteTubeSize) {
 		tubes.tubeScale = absoluteTubeSize;
 	} else {
@@ -459,11 +465,6 @@ module.exports = function(vectorField, bounds) {
 			maxDivergence = 1;
 		}
 		tubes.tubeScale = tubeSize * 0.5 * minDistance / maxDivergence;
-	}
-
-	tubes.minimumTubeSize = tubes.tubeScale * 0.1;
-	if (vectorField.minimumTubeSize !== undefined) {
-		tubes.minimumTubeSize = vectorField.minimumTubeSize;
 	}
 
 	return tubes;
