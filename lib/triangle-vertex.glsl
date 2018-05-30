@@ -6,6 +6,7 @@ attribute vec3 vector;
 attribute vec4 color, position;
 attribute vec2 uv;
 uniform float tubeScale;
+uniform float minimumTubeSize;
 
 uniform mat4 model
            , view
@@ -50,8 +51,8 @@ vec3 getTubePosition(vec3 d, float index, out vec3 normal) {
   vec3 u = getOrthogonalVector(d);
   vec3 v = normalize(cross(u, d));
 
-  vec3 x = u * cos(angle) * length(d);
-  vec3 y = v * sin(angle) * length(d);
+  vec3 x = u * cos(angle) * (minimumTubeSize + length(d));
+  vec3 y = v * sin(angle) * (minimumTubeSize + length(d));
   vec3 v3 = x + y;
 
   normal = normalize(v3);
@@ -63,7 +64,7 @@ void main() {
   // Scale the vector magnitude to stay constant with
   // model & view changes.
   vec3 normal;
-  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * (tubeScale * vector), position.w, normal), 0.0);
+  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * ((tubeScale - minimumTubeSize) * vector), position.w, normal), 0.0);
   normal = normalize(normal * inverse(mat3(model)));
 
   vec4 t_position  = view * tubePosition;

@@ -400,7 +400,7 @@ module.exports = function(vectorField, bounds) {
 
 		var dv = vectorField.getDivergence(p, v);
 		var dvLength = vec3.length(dv);
-		if (dvLength > maxDivergence) {
+		if (dvLength > maxDivergence && !isNaN(dvLength) && isFinite(dvLength)) {
 			maxDivergence = dvLength;
 		}
 		// In case we need to do component-wise divergence visualization
@@ -430,7 +430,7 @@ module.exports = function(vectorField, bounds) {
 				velocities.push(v);
 				var dv = vectorField.getDivergence(np, v);
 				var dvLength = vec3.length(dv);
-				if (dvLength > maxDivergence) {
+				if (dvLength > maxDivergence && !isNaN(dvLength) && isFinite(dvLength)) {
 					maxDivergence = dvLength;
 				}
 				// In case we need to do component-wise divergence visualization
@@ -442,12 +442,30 @@ module.exports = function(vectorField, bounds) {
 		}
 	}
 
+	// Replace NaNs and Infinities with non-NaN, finite maxDivergence
+	for (var i=0; i<divergences.length; i++) {
+		var dvLength = divergences[i];
+		if (isNaN(dvLength) || !isFinite(dvLength)) {
+			divergences[i] = maxDivergence;
+		}
+	}
+
 	var tubes = createTubes(streams, vectorField.colormap);
 	if (absoluteTubeSize) {
 		tubes.tubeScale = absoluteTubeSize;
 	} else {
+		// Avoid division by zero.
+		if (maxDivergence === 0) {
+			maxDivergence = 1;
+		}
 		tubes.tubeScale = tubeSize * 0.5 * minDistance / maxDivergence;
 	}
+
+	tubes.minimumTubeSize = tubes.tubeScale * 0.1;
+	if (vectorField.minimumTubeSize !== undefined) {
+		tubes.minimumTubeSize = vectorField.minimumTubeSize;
+	}
+
 	return tubes;
 };
 
