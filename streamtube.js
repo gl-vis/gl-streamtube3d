@@ -9,9 +9,9 @@ var streamToTube = function(stream, maxDivergence, minDistance) {
 	var divergences = stream.divergences;
 	var maxNorm = 0;
 
-    for (var i = 0; i < points.length; i++) {
-        maxNorm = Math.max(vec3.length(velocities[i]), maxNorm);
-    }
+	for (var i = 0; i < points.length; i++) {
+		maxNorm = Math.max(vec3.length(velocities[i]), maxNorm);
+	}
 
 	var p, fwd, r, u, v, up;
 	up = vec3.set(vec3.create(), 0, 1, 0);
