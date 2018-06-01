@@ -3,15 +3,10 @@
 var vec3 = require('gl-vec3');
 var vec4 = require('gl-vec4');
 
-var streamToTube = function(stream, maxDivergence, minDistance) {
+var streamToTube = function(stream, maxDivergence, minDistance, maxNorm) {
 	var points = stream.points;
 	var velocities = stream.velocities;
 	var divergences = stream.divergences;
-	var maxNorm = 0;
-
-	for (var i = 0; i < points.length; i++) {
-		maxNorm = Math.max(vec3.length(velocities[i]), maxNorm);
-	}
 
 	var p, fwd, r, u, v, up;
 	up = vec3.set(vec3.create(), 0, 1, 0);
@@ -103,9 +98,22 @@ var streamToTube = function(stream, maxDivergence, minDistance) {
 };
 
 var createTubes = function(streams, colormap, maxDivergence, minDistance) {
+
+	var maxNorm = 0;
+	for (var i=0; i<streams.length; i++) {
+		var velocities = streams[i].velocities;
+		for (var j=0; j<velocities.length; j++) {
+			var norm = vec3.length(velocities[j]);
+			if (norm > maxNorm) {
+				maxNorm = norm;
+			}
+		}
+	}
+
 	var tubes = streams.map(function(s) {
-		return streamToTube(s, maxDivergence, minDistance);
+		return streamToTube(s, maxDivergence, minDistance, maxNorm);
 	});
+
 	var positions = [];
 	var cells = [];
 	var vectors = [];
