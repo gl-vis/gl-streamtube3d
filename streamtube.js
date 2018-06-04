@@ -22,8 +22,8 @@ var streamToTube = function(stream, maxDivergence, minDistance, maxNorm) {
 	var intensities = [];
 	var previousIntensity = 0;
 	var currentIntensity = 0;
-	var currentVector = vec3.create();
-	var previousVector = vec3.create();
+	var currentVector = vec4.create();
+	var previousVector = vec4.create();
 
 	var facets = 8;
 
@@ -35,10 +35,10 @@ var streamToTube = function(stream, maxDivergence, minDistance, maxNorm) {
 			r = minDistance * 0.05;
 		}
 		currentIntensity = vec3.length(fwd) / maxNorm;
-		currentVector = vec3.create();
-		vec3.normalize(currentVector, fwd);
-		vec3.scale(currentVector, currentVector, r);
-
+		currentVector = vec4.create();
+		vec3.copy(currentVector, fwd);
+		currentVector[3] = r;
+		
 		for (var a = 0; a < facets; a++) {
 			currentVerts[a] = [p[0], p[1], p[2], a];
 		}
