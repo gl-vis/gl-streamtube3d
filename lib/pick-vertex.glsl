@@ -1,15 +1,21 @@
 precision mediump float;
 
-attribute vec3 position;
+#pragma glslify: getTubePosition = require(./tube-position.glsl)
+
+attribute vec4 vector;
+attribute vec4 position;
 attribute vec4 id;
 
 uniform mat4 model, view, projection;
+uniform float tubeScale;
 
 varying vec3 f_position;
 varying vec4 f_id;
 
 void main() {
-  gl_Position = projection * view * model * vec4(position, 1.0);
+  vec3 normal;
+  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal), 0.0);
+  gl_Position = projection * view * tubePosition;
   f_id        = id;
-  f_position  = position;
+  f_position  = position.xyz;
 }
