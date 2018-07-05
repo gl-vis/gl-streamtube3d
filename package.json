@@ -1,6 +1,6 @@
 {
   "name": "gl-streamtube3d",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "3D stream tube plot",
   "main": "streamtube.js",
   "directories": {
