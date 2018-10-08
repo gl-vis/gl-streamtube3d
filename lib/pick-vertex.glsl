@@ -14,7 +14,10 @@ varying vec4 f_id;
 
 void main() {
   vec3 normal;
-  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal), 0.0);
+
+  vec3 XYZ = getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal);
+  vec4 tubePosition = model * vec4(position.xyz + XYZ, 1.0);
+
   gl_Position = projection * view * tubePosition;
   f_id        = id;
   f_position  = position.xyz;
