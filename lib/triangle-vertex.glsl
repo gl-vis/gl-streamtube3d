@@ -27,10 +27,10 @@ void main() {
   // model & view changes.
   vec3 normal;
   vec3 XYZ = getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal);
-  vec4 tubePosition = model * vec4(position.xyz + XYZ, 1.0);
+  vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(XYZ, 0.0);
   normal = normalize(normal * inverse(mat3(model)));
 
-  gl_Position      = projection * view * tubePosition;
+  gl_Position      = projection * (view * tubePosition);
   f_color          = color;
   f_normal         = normal;
   f_data           = tubePosition.xyz;
