@@ -9,6 +9,7 @@
   "dependencies": {
     "gl-vec3": "^1.0.0",
     "glsl-inverse": "^1.0.0",
+    "glsl-out-of-range": "^1.0.2",
     "glslify": "^6.1.1"
   },
   "devDependencies": {
