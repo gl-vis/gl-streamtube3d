@@ -1,16 +1,17 @@
 precision mediump float;
 
-#pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: getTubePosition = require(./tube-position.glsl)
 
 attribute vec4 vector;
 attribute vec4 color, position;
 attribute vec2 uv;
+uniform float vectorScale;
 uniform float tubeScale;
 
 uniform mat4 model
            , view
-           , projection;
+           , projection
+           , inverseModel;
 uniform vec3 eyePosition
            , lightPosition;
 
@@ -28,14 +29,20 @@ void main() {
   vec3 normal;
   vec3 XYZ = getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal);
   vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(XYZ, 0.0);
-  normal = normalize(normal * inverse(mat3(model)));
 
-  gl_Position      = projection * view * tubePosition;
+  //Lighting geometry parameters
+  vec4 cameraCoordinate = view * tubePosition;
+  cameraCoordinate.xyz /= cameraCoordinate.w;
+  f_lightDirection = lightPosition - cameraCoordinate.xyz;
+  f_eyeDirection   = eyePosition - cameraCoordinate.xyz;
+  f_normal = normalize((vec4(normal,0) * inverseModel).xyz);
+
+  // vec4 m_position  = model * vec4(tubePosition, 1.0);
+  vec4 t_position  = view * tubePosition;
+  gl_Position      = projection * t_position;
+
   f_color          = color;
-  f_normal         = normal;
   f_data           = tubePosition.xyz;
   f_position       = position.xyz;
-  f_eyeDirection   = eyePosition   - tubePosition.xyz;
-  f_lightDirection = lightPosition - tubePosition.xyz;
   f_uv             = uv;
 }
