@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 #pragma glslify: getTubePosition = require(./tube-position.glsl)
 
