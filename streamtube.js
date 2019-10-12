@@ -534,17 +534,6 @@ module.exports = function(vectorField, bounds) {
 		}
 	}
 
-	// Replace NaNs and Infinities with non-NaN, finite maxDivergence
-	// Why we need this?
-	// The divergences variable is defined inside the loop and reset every time.
-	// This only fixes the last one?
-	var len = divergences.length;
-	for (var i=0; i<len; i++) {
-		if (!isFinite(divergences[i])) {
-			divergences[i] = maxDivergence;
-		}
-	}
-
 	var tubes = createTubes(streams, vectorField.colormap, maxDivergence, minDistance);
 
 	if (absoluteTubeSize) {
