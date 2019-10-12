@@ -207,10 +207,6 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	var y1 = y0 + 1;
 	var z1 = z0 + 1;
 
-	if (meshgrid[0][x0] === x) x1 = x0;
-	if (meshgrid[1][y0] === y) y1 = y0;
-	if (meshgrid[2][z0] === z) z1 = z0;
-
 	if (clampOverflow) {
 		x0 = clamp(x0, 0, w-1);
 		x1 = clamp(x1, 0, w-1);
@@ -221,7 +217,7 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	}
 
 	// Reject points outside the meshgrid, return a zero vector.
-	if (x0 < 0 || y0 < 0 || z0 < 0 || x1 >= w || y1 >= h || z1 >= d) {
+	if (x0 < 0 || y0 < 0 || z0 < 0 || x1 > w-1 || y1 > h-1 || z1 > d-1) {
 		return vec3.create();
 	}
 
@@ -236,13 +232,9 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	var yf = (y - mY0) / (mY1 - mY0);
 	var zf = (z - mZ0) / (mZ1 - mZ0);
 
-	// Likely we don't need these tests:
-	if (!isFinite(xf)) xf = 0;
-	if (!isFinite(yf)) yf = 0;
-	if (!isFinite(zf)) zf = 0;
-	xf = Math.max(0, Math.min(1, xf));
-	yf = Math.max(0, Math.min(1, yf));
-	zf = Math.max(0, Math.min(1, zf));
+	if (!isFinite(xf)) xf = 0.5;
+	if (!isFinite(yf)) yf = 0.5;
+	if (!isFinite(zf)) zf = 0.5;
 
 	var x0off;
 	var x1off;
