@@ -236,9 +236,13 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	var yf = (y - mY0) / (mY1 - mY0);
 	var zf = (z - mZ0) / (mZ1 - mZ0);
 
-	if (xf < 0 || xf > 1 || isNaN(xf)) xf = 0;
-	if (yf < 0 || yf > 1 || isNaN(yf)) yf = 0;
-	if (zf < 0 || zf > 1 || isNaN(zf)) zf = 0;
+	// Likely we don't need these tests:
+	if (!isFinite(xf)) xf = 0;
+	if (!isFinite(yf)) yf = 0;
+	if (!isFinite(zf)) zf = 0;
+	xf = Math.max(0, Math.min(1, xf));
+	yf = Math.max(0, Math.min(1, yf));
+	zf = Math.max(0, Math.min(1, zf));
 
 	var x0off;
 	var x1off;
@@ -488,7 +492,7 @@ module.exports = function(vectorField, bounds) {
 
 		var dv = vectorField.getDivergence(p, v);
 		var dvLength = vec3.length(dv);
-		if (dvLength > maxDivergence && !isNaN(dvLength) && isFinite(dvLength)) {
+		if (isFinite(dvLength) && dvLength > maxDivergence) {
 			maxDivergence = dvLength;
 		}
 		// In case we need to do component-wise divergence visualization
@@ -518,7 +522,7 @@ module.exports = function(vectorField, bounds) {
 				velocities.push(v);
 				var dv = vectorField.getDivergence(np, v);
 				var dvLength = vec3.length(dv);
-				if (dvLength > maxDivergence && !isNaN(dvLength) && isFinite(dvLength)) {
+				if (isFinite(dvLength) && dvLength > maxDivergence) {
 					maxDivergence = dvLength;
 				}
 				// In case we need to do component-wise divergence visualization
@@ -531,10 +535,12 @@ module.exports = function(vectorField, bounds) {
 	}
 
 	// Replace NaNs and Infinities with non-NaN, finite maxDivergence
+	// Why we need this?
+	// The divergences variable is defined inside the loop and reset every time.
+	// This only fixes the last one?
 	var len = divergences.length;
 	for (var i=0; i<len; i++) {
-		var dvLength = divergences[i];
-		if (isNaN(dvLength) || !isFinite(dvLength)) {
+		if (!isFinite(divergences[i])) {
 			divergences[i] = maxDivergence;
 		}
 	}
