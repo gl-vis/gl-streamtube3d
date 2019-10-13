@@ -424,7 +424,7 @@ module.exports = function(vectorField, bounds) {
 	var absoluteTubeSize = vectorField.absoluteTubeSize;
 
 	if (!vectorField.gridFill) {
-		vectorField.gridFill = 'zyx';
+		vectorField.gridFill = 'xyz';
 	}
 
 	if (!vectorField.getDivergence) {
