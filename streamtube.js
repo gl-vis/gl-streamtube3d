@@ -243,6 +243,24 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	var z0off;
 	var z1off;
 
+	if(gridFill.indexOf('-x') !== -1) {
+		x0 = w - 1 - x0;
+		x1 = w - 1 - x1;
+	}
+
+	if(gridFill.indexOf('-y') !== -1) {
+		y0 = h - 1 - y0;
+		y1 = h - 1 - y1;
+	}
+
+	if(gridFill.indexOf('-z') !== -1) {
+		z0 = d - 1 - z0;
+		z1 = d - 1 - z1;
+	}
+
+	gridFill = gridFill.replace(/-/g, '');
+	gridFill = gridFill.replace(/\+/g, '');
+
 	switch(gridFill) {
 		case 'xyz':
 			x0off = x0;
@@ -424,7 +442,7 @@ module.exports = function(vectorField, bounds) {
 	var absoluteTubeSize = vectorField.absoluteTubeSize;
 
 	if (!vectorField.gridFill) {
-		vectorField.gridFill = 'xyz';
+		vectorField.gridFill = '+x+y+z';
 	}
 
 	if (!vectorField.getDivergence) {
