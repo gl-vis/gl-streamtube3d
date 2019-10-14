@@ -139,35 +139,6 @@ var createTubes = function(streams, colormap, maxDivergence, minDistance) {
 	};
 };
 
-var defaultGetDivergence = function(p, v0) {
-	var dp = vec3.create();
-	var e = 1/10000;
-
-	vec3.add(dp, p, [e, 0, 0]);
-	var vx = this.getVelocity(dp);
-	vec3.subtract(vx, vx, v0);
-	vec3.scale(vx, vx, 1/e);
-
-	vec3.add(dp, p, [0, e, 0]);
-	var vy = this.getVelocity(dp);
-	vec3.subtract(vy, vy, v0);
-	vec3.scale(vy, vy, 1/e);
-
-	vec3.add(dp, p, [0, 0, e]);
-	var vz = this.getVelocity(dp);
-	vec3.subtract(vz, vz, v0);
-	vec3.scale(vz, vz, 1/e);
-
-	vec3.add(dp, vx, vy);
-	vec3.add(dp, dp, vz);
-	return dp;
-};
-
-var defaultGetVelocity = function(p) {
-    return sampleMeshgrid(p, this.vectors, this.meshgrid, this.clampBorders, this.gridFill);
-};
-
-
 var findLastSmallerIndex = function(points, v) {
   var len = points.length;
   var i;
@@ -183,7 +154,12 @@ var clamp = function(v, min, max) {
 	return v < min ? min : (v > max ? max : v);
 };
 
-var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
+var sampleMeshgrid = function(point, vectorField) {
+	var vectors = vectorField.vectors;
+	var meshgrid = vectorField.meshgrid;
+	var gridFill = vectorField.gridFill;
+	var clampBorders = vectorField.clampBorders;
+
 	var x = point[0];
 	var y = point[1];
 	var z = point[2];
@@ -207,7 +183,7 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 	var y1 = y0 + 1;
 	var z1 = z0 + 1;
 
-	if (clampOverflow) {
+	if (clampBorders) {
 		x0 = clamp(x0, 0, w-1);
 		x1 = clamp(x1, 0, w-1);
 		y0 = clamp(y0, 0, h-1);
@@ -317,15 +293,15 @@ var sampleMeshgrid = function(point, array, meshgrid, clampOverflow, gridFill) {
 			break;
 	}
 
-	// Sample data array around the (x,y,z) point.
-	var v000 = array[x0off + y0off + z0off];
-	var v001 = array[x0off + y0off + z1off];
-	var v010 = array[x0off + y1off + z0off];
-	var v011 = array[x0off + y1off + z1off];
-	var v100 = array[x1off + y0off + z0off];
-	var v101 = array[x1off + y0off + z1off];
-	var v110 = array[x1off + y1off + z0off];
-	var v111 = array[x1off + y1off + z1off];
+	// Sample data vectors around the (x,y,z) point.
+	var v000 = vectors[x0off + y0off + z0off];
+	var v001 = vectors[x0off + y0off + z1off];
+	var v010 = vectors[x0off + y1off + z0off];
+	var v011 = vectors[x0off + y1off + z1off];
+	var v100 = vectors[x1off + y0off + z0off];
+	var v101 = vectors[x1off + y0off + z1off];
+	var v110 = vectors[x1off + y1off + z0off];
+	var v111 = vectors[x1off + y1off + z1off];
 
 	var c00 = vec3.create();
 	var c01 = vec3.create();
@@ -441,20 +417,44 @@ module.exports = function(vectorField, bounds) {
 	var tubeSize = vectorField.tubeSize || 1;
 	var absoluteTubeSize = vectorField.absoluteTubeSize;
 
+	if (vectorField.clampBorders === undefined) {
+		vectorField.clampBorders = true;
+	}
+
 	if (!vectorField.gridFill) {
 		vectorField.gridFill = '+x+y+z';
 	}
 
-	if (!vectorField.getDivergence) {
-		vectorField.getDivergence = defaultGetDivergence;
-	}
-
 	if (!vectorField.getVelocity) {
-		vectorField.getVelocity = defaultGetVelocity;
+		vectorField.getVelocity = function(p) {
+			return sampleMeshgrid(p, vectorField);
+		};
 	}
 
-	if (vectorField.clampBorders === undefined) {
-		vectorField.clampBorders = true;
+	if (!vectorField.getDivergence) {
+		vectorField.getDivergence = function(p, v0) {
+			var dp = vec3.create();
+			var e = 1/10000;
+
+			vec3.add(dp, p, [e, 0, 0]);
+			var vx = vectorField.getVelocity(dp);
+			vec3.subtract(vx, vx, v0);
+			vec3.scale(vx, vx, 1/e);
+
+			vec3.add(dp, p, [0, e, 0]);
+			var vy = vectorField.getVelocity(dp);
+			vec3.subtract(vy, vy, v0);
+			vec3.scale(vy, vy, 1/e);
+
+			vec3.add(dp, p, [0, 0, e]);
+			var vz = vectorField.getVelocity(dp);
+			vec3.subtract(vz, vz, v0);
+			vec3.scale(vz, vz, 1/e);
+
+			vec3.add(dp, vx, vy);
+			vec3.add(dp, dp, vz);
+			return dp;
+		};
 	}
 
 	var streams = [];
