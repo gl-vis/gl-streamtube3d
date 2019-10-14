@@ -424,10 +424,11 @@ module.exports = function(vectorField, bounds) {
 	}
 
 	var gridFill = vectorField.gridFill;
+
 	vectorField._grid = {};
 	if(gridFill.indexOf('-x') !== -1) { vectorField._grid.reversedX = true; }
-	if(gridFill.indexOf('-y') !== -1) { vectorField._grid.reversedZ = true; }
-	if(gridFill.indexOf('-z') !== -1) { vectorField._grid.reversedY = true; }
+	if(gridFill.indexOf('-y') !== -1) { vectorField._grid.reversedY = true; }
+	if(gridFill.indexOf('-z') !== -1) { vectorField._grid.reversedZ = true; }
 	vectorField._grid.filled = GRID_TYPES.indexOf(gridFill.replace(/-/g, '').replace(/\+/g, ''));
 
 	if (!vectorField.getVelocity) {
