@@ -2,6 +2,7 @@
 
 var vec3 = require('gl-vec3');
 var vec4 = require('gl-vec4');
+var GRID_TYPES = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'];
 
 var streamToTube = function(stream, maxDivergence, minDistance, maxNorm) {
 	var points = stream.points;
@@ -157,7 +158,7 @@ var clamp = function(v, min, max) {
 var sampleMeshgrid = function(point, vectorField) {
 	var vectors = vectorField.vectors;
 	var meshgrid = vectorField.meshgrid;
-	var gridFill = vectorField.gridFill;
+	var _grid = vectorField._grid;
 	var clampBorders = vectorField.clampBorders;
 
 	var x = point[0];
@@ -219,62 +220,32 @@ var sampleMeshgrid = function(point, vectorField) {
 	var z0off;
 	var z1off;
 
-	if(gridFill.indexOf('-x') !== -1) {
+	if(_grid.reversedX) {
 		x0 = w - 1 - x0;
 		x1 = w - 1 - x1;
 	}
 
-	if(gridFill.indexOf('-y') !== -1) {
+	if(_grid.reversedY) {
 		y0 = h - 1 - y0;
 		y1 = h - 1 - y1;
 	}
 
-	if(gridFill.indexOf('-z') !== -1) {
+	if(_grid.reversedZ) {
 		z0 = d - 1 - z0;
 		z1 = d - 1 - z1;
 	}
 
-	gridFill = gridFill.replace(/-/g, '');
-	gridFill = gridFill.replace(/\+/g, '');
-
-	switch(gridFill) {
-		case 'xyz':
-			x0off = x0;
-			x1off = x1;
-			y0off = y0*w;
-			y1off = y1*w;
-			z0off = z0*w*h;
-			z1off = z1*w*h;
+	switch(_grid.filled) {
+		case 5: // 'zyx'
+			z0off = z0;
+			z1off = z1;
+			y0off = y0*d;
+			y1off = y1*d;
+			x0off = x0*d*h;
+			x1off = x1*d*h;
 			break;
 
-		case 'xzy':
-			x0off = x0;
-			x1off = x1;
-			z0off = z0*w;
-			z1off = z1*w;
-			y0off = y0*w*d;
-			y1off = y1*w*d;
-			break;
-
-		case 'yxz':
-			y0off = y0;
-			y1off = y1;
-			x0off = x0*h;
-			x1off = x1*h;
-			z0off = z0*h*w;
-			z1off = z1*h*w;
-			break;
-
-		case 'yzx':
-			y0off = y0;
-			y1off = y1;
-			z0off = z0*h;
-			z1off = z1*h;
-			x0off = x0*h*d;
-			x1off = x1*h*d;
-			break;
-
-		case 'zxy':
+		case 4: // 'zxy'
 			z0off = z0;
 			z1off = z1;
 			x0off = x0*d;
@@ -283,13 +254,40 @@ var sampleMeshgrid = function(point, vectorField) {
 			y1off = y1*d*w;
 			break;
 
-		case 'zyx':
-			z0off = z0;
-			z1off = z1;
-			y0off = y0*d;
-			y1off = y1*d;
-			x0off = x0*d*h;
-			x1off = x1*d*h;
+		case 3: // 'yzx'
+			y0off = y0;
+			y1off = y1;
+			z0off = z0*h;
+			z1off = z1*h;
+			x0off = x0*h*d;
+			x1off = x1*h*d;
+			break;
+
+		case 2: // 'yxz'
+			y0off = y0;
+			y1off = y1;
+			x0off = x0*h;
+			x1off = x1*h;
+			z0off = z0*h*w;
+			z1off = z1*h*w;
+			break;
+
+		case 1: // 'xzy'
+			x0off = x0;
+			x1off = x1;
+			z0off = z0*w;
+			z1off = z1*w;
+			y0off = y0*w*d;
+			y1off = y1*w*d;
+			break;
+
+		default: // case 0: // 'xyz'
+			x0off = x0;
+			x1off = x1;
+			y0off = y0*w;
+			y1off = y1*w;
+			z0off = z0*w*h;
+			z1off = z1*w*h;
 			break;
 	}
 
@@ -338,7 +336,7 @@ var vabs = function(dst, v) {
 };
 
 var findMinSeparation = function(xs) {
-	var minSeparation = 1/0;
+	var minSeparation = Infinity;
 	xs.sort(function(a, b) { return a - b; });
 	var len = xs.length;
 	for (var i=1; i<len; i++) {
@@ -425,6 +423,13 @@ module.exports = function(vectorField, bounds) {
 		vectorField.gridFill = '+x+y+z';
 	}
 
+	var gridFill = vectorField.gridFill;
+	vectorField._grid = {};
+	if(gridFill.indexOf('-x') !== -1) { vectorField._grid.reversedX = true; }
+	if(gridFill.indexOf('-y') !== -1) { vectorField._grid.reversedZ = true; }
+	if(gridFill.indexOf('-z') !== -1) { vectorField._grid.reversedY = true; }
+	vectorField._grid.filled = GRID_TYPES.indexOf(gridFill.replace(/-/g, '').replace(/\+/g, ''));
+
 	if (!vectorField.getVelocity) {
 		vectorField.getVelocity = function(p) {
 			return sampleMeshgrid(p, vectorField);
@@ -434,7 +439,7 @@ module.exports = function(vectorField, bounds) {
 	if (!vectorField.getDivergence) {
 		vectorField.getDivergence = function(p, v0) {
 			var dp = vec3.create();
-			var e = 1/10000;
+			var e = 0.0001;
 
 			vec3.add(dp, p, [e, 0, 0]);
 			var vx = vectorField.getVelocity(dp);
