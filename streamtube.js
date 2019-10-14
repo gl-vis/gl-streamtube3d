@@ -155,11 +155,9 @@ var clamp = function(v, min, max) {
 	return v < min ? min : (v > max ? max : v);
 };
 
-var sampleMeshgrid = function(point, vectorField) {
+var sampleMeshgrid = function(point, vectorField, gridInfo) {
 	var vectors = vectorField.vectors;
 	var meshgrid = vectorField.meshgrid;
-	var _grid = vectorField._grid;
-	var clampBorders = vectorField.clampBorders;
 
 	var x = point[0];
 	var y = point[1];
@@ -184,14 +182,12 @@ var sampleMeshgrid = function(point, vectorField) {
 	var y1 = y0 + 1;
 	var z1 = z0 + 1;
 
-	if (clampBorders) {
-		x0 = clamp(x0, 0, w-1);
-		x1 = clamp(x1, 0, w-1);
-		y0 = clamp(y0, 0, h-1);
-		y1 = clamp(y1, 0, h-1);
-		z0 = clamp(z0, 0, d-1);
-		z1 = clamp(z1, 0, d-1);
-	}
+	x0 = clamp(x0, 0, w-1);
+	x1 = clamp(x1, 0, w-1);
+	y0 = clamp(y0, 0, h-1);
+	y1 = clamp(y1, 0, h-1);
+	z0 = clamp(z0, 0, d-1);
+	z1 = clamp(z1, 0, d-1);
 
 	// Reject points outside the meshgrid, return a zero vector.
 	if (x0 < 0 || y0 < 0 || z0 < 0 || x1 > w-1 || y1 > h-1 || z1 > d-1) {
@@ -220,22 +216,22 @@ var sampleMeshgrid = function(point, vectorField) {
 	var z0off;
 	var z1off;
 
-	if(_grid.reversedX) {
+	if(gridInfo.reversedX) {
 		x0 = w - 1 - x0;
 		x1 = w - 1 - x1;
 	}
 
-	if(_grid.reversedY) {
+	if(gridInfo.reversedY) {
 		y0 = h - 1 - y0;
 		y1 = h - 1 - y1;
 	}
 
-	if(_grid.reversedZ) {
+	if(gridInfo.reversedZ) {
 		z0 = d - 1 - z0;
 		z1 = d - 1 - z1;
 	}
 
-	switch(_grid.filled) {
+	switch(gridInfo.filled) {
 		case 5: // 'zyx'
 			z0off = z0;
 			z1off = z1;
@@ -414,54 +410,41 @@ module.exports = function(vectorField, bounds) {
 	var maxLength = vectorField.maxLength || 1000;
 	var tubeSize = vectorField.tubeSize || 1;
 	var absoluteTubeSize = vectorField.absoluteTubeSize;
+	var gridFill = vectorField.gridFill || '+x+y+z';
 
-	if (vectorField.clampBorders === undefined) {
-		vectorField.clampBorders = true;
-	}
+	var gridInfo = {};
+	if(gridFill.indexOf('-x') !== -1) { gridInfo.reversedX = true; }
+	if(gridFill.indexOf('-y') !== -1) { gridInfo.reversedY = true; }
+	if(gridFill.indexOf('-z') !== -1) { gridInfo.reversedZ = true; }
+	gridInfo.filled = GRID_TYPES.indexOf(gridFill.replace(/-/g, '').replace(/\+/g, ''));
 
-	if (!vectorField.gridFill) {
-		vectorField.gridFill = '+x+y+z';
-	}
+	var getVelocity = function(p) {
+		return sampleMeshgrid(p, vectorField, gridInfo);
+	};
 
-	var gridFill = vectorField.gridFill;
+	var getDivergence = function(p, v0) {
+		var dp = vec3.create();
+		var e = 0.0001;
 
-	vectorField._grid = {};
-	if(gridFill.indexOf('-x') !== -1) { vectorField._grid.reversedX = true; }
-	if(gridFill.indexOf('-y') !== -1) { vectorField._grid.reversedY = true; }
-	if(gridFill.indexOf('-z') !== -1) { vectorField._grid.reversedZ = true; }
-	vectorField._grid.filled = GRID_TYPES.indexOf(gridFill.replace(/-/g, '').replace(/\+/g, ''));
+		vec3.add(dp, p, [e, 0, 0]);
+		var vx = getVelocity(dp);
+		vec3.subtract(vx, vx, v0);
+		vec3.scale(vx, vx, 1/e);
 
-	if (!vectorField.getVelocity) {
-		vectorField.getVelocity = function(p) {
-			return sampleMeshgrid(p, vectorField);
-		};
-	}
+		vec3.add(dp, p, [0, e, 0]);
+		var vy = getVelocity(dp);
+		vec3.subtract(vy, vy, v0);
+		vec3.scale(vy, vy, 1/e);
 
-	if (!vectorField.getDivergence) {
-		vectorField.getDivergence = function(p, v0) {
-			var dp = vec3.create();
-			var e = 0.0001;
+		vec3.add(dp, p, [0, 0, e]);
+		var vz = getVelocity(dp);
+		vec3.subtract(vz, vz, v0);
+		vec3.scale(vz, vz, 1/e);
 
-			vec3.add(dp, p, [e, 0, 0]);
-			var vx = vectorField.getVelocity(dp);
-			vec3.subtract(vx, vx, v0);
-			vec3.scale(vx, vx, 1/e);
-
-			vec3.add(dp, p, [0, e, 0]);
-			var vy = vectorField.getVelocity(dp);
-			vec3.subtract(vy, vy, v0);
-			vec3.scale(vy, vy, 1/e);
-
-			vec3.add(dp, p, [0, 0, e]);
-			var vz = vectorField.getVelocity(dp);
-			vec3.subtract(vz, vz, v0);
-			vec3.scale(vz, vz, 1/e);
-
-			vec3.add(dp, vx, vy);
-			vec3.add(dp, dp, vz);
-			return dp;
-		};
-	}
+		vec3.add(dp, vx, vy);
+		vec3.add(dp, dp, vz);
+		return dp;
+	};
 
 	var streams = [];
 
@@ -500,13 +483,13 @@ module.exports = function(vectorField, bounds) {
 
 		var stream = [p];
 		var velocities = [];
-		var v = vectorField.getVelocity(p);
+		var v = getVelocity(p);
 		var op = p;
 		velocities.push(v);
 
 		var divergences = [];
 
-		var dv = vectorField.getDivergence(p, v);
+		var dv = getDivergence(p, v);
 		var dvLength = vec3.length(dv);
 		if (isFinite(dvLength) && dvLength > maxDivergence) {
 			maxDivergence = dvLength;
@@ -530,13 +513,13 @@ module.exports = function(vectorField, bounds) {
 			}
 			vec3.add(np, np, p);
 
-			v = vectorField.getVelocity(np);
+			v = getVelocity(np);
 
 			if (vec3.squaredDistance(op, np) - maxStepSizeSq > -0.0001 * maxStepSizeSq) {
 				stream.push(np);
 				op = np;
 				velocities.push(v);
-				var dv = vectorField.getDivergence(np, v);
+				var dv = getDivergence(np, v);
 				var dvLength = vec3.length(dv);
 				if (isFinite(dvLength) && dvLength > maxDivergence) {
 					maxDivergence = dvLength;
