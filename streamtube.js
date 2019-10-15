@@ -418,11 +418,11 @@ module.exports = function(vectorField, bounds) {
 	if(gridFill.indexOf('-z') !== -1) { gridInfo.reversedZ = true; }
 	gridInfo.filled = GRID_TYPES.indexOf(gridFill.replace(/-/g, '').replace(/\+/g, ''));
 
-	var getVelocity = function(p) {
+	var getVelocity = vectorField.getVelocity || function(p) {
 		return sampleMeshgrid(p, vectorField, gridInfo);
 	};
 
-	var getDivergence = function(p, v0) {
+	var getDivergence = vectorField.getDivergence || function(p, v0) {
 		var dp = vec3.create();
 		var e = 0.0001;
 
