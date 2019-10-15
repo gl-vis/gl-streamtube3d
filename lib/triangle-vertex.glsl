@@ -5,21 +5,12 @@ precision highp float;
 attribute vec4 vector;
 attribute vec4 color, position;
 attribute vec2 uv;
-uniform float vectorScale;
-uniform float tubeScale;
 
-uniform mat4 model
-           , view
-           , projection
-           , inverseModel;
-uniform vec3 eyePosition
-           , lightPosition;
+uniform float vectorScale, tubeScale;
+uniform mat4 model, view, projection, inverseModel;
+uniform vec3 eyePosition, lightPosition;
 
-varying vec3 f_normal
-           , f_lightDirection
-           , f_eyeDirection
-           , f_data
-           , f_position;
+varying vec3 f_normal, f_lightDirection, f_eyeDirection, f_data, f_position;
 varying vec4 f_color;
 varying vec2 f_uv;
 
@@ -35,7 +26,7 @@ void main() {
   cameraCoordinate.xyz /= cameraCoordinate.w;
   f_lightDirection = lightPosition - cameraCoordinate.xyz;
   f_eyeDirection   = eyePosition - cameraCoordinate.xyz;
-  f_normal = normalize((vec4(normal,0.0) * inverseModel).xyz);
+  f_normal = normalize((vec4(normal, 0.0) * inverseModel).xyz);
 
   // vec4 m_position  = model * vec4(tubePosition, 1.0);
   vec4 t_position  = view * tubePosition;
