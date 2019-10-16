@@ -548,4 +548,11 @@ module.exports = function(vectorField, bounds) {
 	return tubes;
 };
 
-module.exports.createTubeMesh = require('./lib/tubemesh');
+var shaders = require('./lib/shaders');
+var createMesh = require('gl-cone3d').createMesh;
+module.exports.createTubeMesh = function(gl, params) {
+	return createMesh(gl, params, {
+		shaders: shaders,
+		traceType: 'streamtube'
+	});
+}
