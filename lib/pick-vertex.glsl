@@ -17,7 +17,7 @@ void main() {
   vec3 XYZ = getTubePosition(mat3(model) * (tubeScale * vector.w * normalize(vector.xyz)), position.w, normal);
   vec4 tubePosition = model * vec4(position.xyz, 1.0) + vec4(XYZ, 0.0);
 
-  gl_Position = projection * view * tubePosition;
+  gl_Position = projection * (view * tubePosition);
   f_id        = id;
   f_position  = position.xyz;
 }
